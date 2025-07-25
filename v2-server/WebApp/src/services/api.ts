@@ -1,3 +1,5 @@
+import { Job, JobAssignment } from '../types';
+
 // Use relative URLs in production (Vercel) and allow override in development
 const API_BASE_URL = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
 
@@ -48,8 +50,6 @@ export interface ApiUser {
   createdAt: string;
   updatedAt: string;
 }
-
-import { Job, JobAssignment } from '../types';
 
 export interface ApiJob {
   id: string;
