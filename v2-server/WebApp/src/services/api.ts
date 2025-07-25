@@ -82,7 +82,7 @@ export interface ApiJobAssignment {
 export const api = {
   // Authentication
   async login(username: string, password: string): Promise<{ user: any; token: string; expiresAt: string }> {
-    const url = `${API_BASE_URL}/api/auth`;
+    const url = `${API_BASE_URL}/api/auth-debug`;
     console.log('Making login request to:', url);
     console.log('Login credentials:', { username, hasPassword: !!password });
     
