@@ -89,12 +89,12 @@ export default function JobCalendar({
   
   // If no technicians found, create some demo ones for testing
   const displayTechnicians = technicians.length > 0 ? technicians : [
-    { id: 'demo1', displayName: 'John Doe', role: 'tech', isActive: true },
-    { id: 'demo2', displayName: 'Jane Smith', role: 'tech', isActive: true },
-    { id: 'demo3', displayName: 'Mike Johnson', role: 'tech', isActive: true },
-    { id: 'demo4', displayName: 'Sarah Wilson', role: 'tech', isActive: true },
-    { id: 'demo5', displayName: 'David Brown', role: 'tech', isActive: true }
-  ];
+    { id: 'demo1', displayName: 'John Doe', role: 'tech' as const, isActive: true, username: 'john.doe', email: 'john@icav.com' },
+    { id: 'demo2', displayName: 'Jane Smith', role: 'tech' as const, isActive: true, username: 'jane.smith', email: 'jane@icav.com' },
+    { id: 'demo3', displayName: 'Mike Johnson', role: 'tech' as const, isActive: true, username: 'mike.johnson', email: 'mike@icav.com' },
+    { id: 'demo4', displayName: 'Sarah Wilson', role: 'tech' as const, isActive: true, username: 'sarah.wilson', email: 'sarah@icav.com' },
+    { id: 'demo5', displayName: 'David Brown', role: 'tech' as const, isActive: true, username: 'david.brown', email: 'david@icav.com' }
+  ] as typeof users;
   
   console.log('JobCalendar - Final technicians:', displayTechnicians.length);
 
