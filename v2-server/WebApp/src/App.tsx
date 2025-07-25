@@ -513,19 +513,53 @@ function AppContent() {
                 </div>
               )}
 
+              {/* Navigation Buttons */}
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setCurrentView('dashboard')}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                    currentView === 'dashboard' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <Clock className="w-4 h-4" />
+                  <span>Dashboard</span>
+                </button>
+                
+                {authState.user?.role === 'admin' && (
+                  <button
+                    onClick={() => setCurrentView('calendar')}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                      currentView === 'calendar' 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <Calendar className="w-4 h-4" />
+                    <span>Job Calendar</span>
+                  </button>
+                )}
+                
+                <button
+                  onClick={() => setCurrentView('reports')}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                    currentView === 'reports' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Reports</span>
+                </button>
+              </div>
+
               {/* Admin-only features */}
               {authState.user?.role === 'admin' && (
                 <>
                   <button
-                    onClick={() => setShowReports(true)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <FileText className="w-4 h-4" />
-                    <span>Reports</span>
-                  </button>
-                  <button
                     onClick={handleExport}
-                    className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                   >
                     <Download className="w-4 h-4" />
                     <span>Export</span>
@@ -556,63 +590,86 @@ function AppContent() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Dashboard Stats */}
-        <DashboardStatsComponent stats={dashboardStats} />
+        {currentView === 'dashboard' && (
+          <>
+            {/* Dashboard Stats */}
+            <DashboardStatsComponent stats={dashboardStats} />
 
-        {/* Filters */}
-        <TimeEntryFiltersComponent
-          filters={filters}
-          onFiltersChange={setFilters}
-          technicianNames={technicianNames}
-          customerNames={customerNames}
-        />
+            {/* Filters */}
+            <TimeEntryFiltersComponent
+              filters={filters}
+              onFiltersChange={setFilters}
+              technicianNames={technicianNames}
+              customerNames={customerNames}
+            />
 
-        {/* Results Summary */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Time Entries ({filteredEntries.length})
-            </h2>
-            <div className="text-sm text-gray-500">
-              Showing {filteredEntries.length} of {timeEntries.length} entries
-            </div>
-          </div>
-        </div>
-
-        {/* Time Entries */}
-        <div className="space-y-8">
-          {Object.entries(groupedEntries).map(([dateKey, entries]) => (
-            <div key={dateKey}>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                {dateKey === 'Unknown' ? 'Unknown Date' : formatDate(new Date(dateKey))}
-              </h3>
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {entries.map((entry) => (
-                  <TimeEntryCard
-                    key={entry.id}
-                    entry={entry}
-                    onClick={() => setSelectedEntry(entry)}
-                    onDelete={handleDeleteEntry}
-                    isDeleting={deletingEntry === entry.id}
-                  />
-                ))}
+            {/* Results Summary */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Time Entries ({filteredEntries.length})
+                </h2>
+                <div className="text-sm text-gray-500">
+                  Showing {filteredEntries.length} of {timeEntries.length} entries
+                </div>
               </div>
             </div>
-          ))}
 
-          {filteredEntries.length === 0 && !loading && (
-            <div className="text-center py-12">
-              <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No time entries found</h3>
-              <p className="text-gray-500">
-                {timeEntries.length === 0 
-                  ? "No time entries in database. Add some entries to get started."
-                  : "Try adjusting your filters to see more results."
-                }
-              </p>
+            {/* Time Entries */}
+            <div className="space-y-8">
+              {Object.entries(groupedEntries).map(([dateKey, entries]) => (
+                <div key={dateKey}>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">
+                    {dateKey === 'Unknown' ? 'Unknown Date' : formatDate(new Date(dateKey))}
+                  </h3>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {entries.map((entry) => (
+                      <TimeEntryCard
+                        key={entry.id}
+                        entry={entry}
+                        onClick={() => setSelectedEntry(entry)}
+                        onDelete={handleDeleteEntry}
+                        isDeleting={deletingEntry === entry.id}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              {filteredEntries.length === 0 && !loading && (
+                <div className="text-center py-12">
+                  <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No time entries found</h3>
+                  <p className="text-gray-500">
+                    {timeEntries.length === 0 
+                      ? "No time entries in database. Add some entries to get started."
+                      : "Try adjusting your filters to see more results."
+                    }
+                  </p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
+
+        {currentView === 'calendar' && authState.user?.role === 'admin' && (
+          <JobCalendar
+            users={users}
+            jobs={jobs}
+            assignments={assignments}
+            onAssignJob={handleAssignJob}
+            onUpdateAssignment={handleUpdateAssignment}
+            onDeleteAssignment={handleDeleteAssignment}
+            onCreateJob={handleCreateJob}
+          />
+        )}
+
+        {currentView === 'reports' && (
+          <Reports
+            timeEntries={timeEntries}
+            onClose={() => setCurrentView('dashboard')}
+          />
+        )}
       </main>
 
       {/* Settings Modal - Admin Only */}
@@ -983,13 +1040,7 @@ function AppContent() {
         </div>
       )}
 
-      {/* Reports Modal */}
-      {showReports && (
-        <Reports
-          timeEntries={timeEntries}
-          onClose={() => setShowReports(false)}
-        />
-      )}
+
     </div>
   );
 }
