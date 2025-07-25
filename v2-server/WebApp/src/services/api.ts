@@ -49,6 +49,36 @@ export interface ApiUser {
   updatedAt: string;
 }
 
+import { Job, JobAssignment } from '../types';
+
+export interface ApiJob {
+  id: string;
+  title: string;
+  customerName: string;
+  description?: string;
+  location?: string;
+  estimatedHours: number;
+  status: string;
+  priority: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ApiJobAssignment {
+  id: string;
+  jobId: string;
+  userId: string;
+  technicianName: string;
+  assignedDate: string;
+  assignedHours: number;
+  actualHours?: number;
+  status: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const api = {
   // Authentication
   async login(username: string, password: string): Promise<{ user: any; token: string; expiresAt: string }> {
@@ -229,6 +259,178 @@ export const api = {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
       throw new Error(errorData.error || `Failed to clear database: ${response.status} ${response.statusText}`);
+    }
+    return response.json();
+  },
+
+  // Jobs
+  async getJobs(): Promise<ApiJob[]> {
+    const url = `${API_BASE_URL}/api/jobs`;
+    const response = await fetch(url, {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch jobs: ${response.status} ${response.statusText}`);
+    }
+    return response.json();
+  },
+
+  async createJob(data: {
+    title: string;
+    customerName: string;
+    description?: string;
+    location?: string;
+    estimatedHours: number;
+    priority?: string;
+    status?: string;
+  }): Promise<ApiJob> {
+    const url = `${API_BASE_URL}/api/jobs`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(errorData.error || `Failed to create job: ${response.status} ${response.statusText}`);
+    }
+    return response.json();
+  },
+
+  async updateJob(jobId: string, updates: Partial<{
+    title: string;
+    customerName: string;
+    description: string;
+    location: string;
+    estimatedHours: number;
+    priority: string;
+    status: string;
+  }>): Promise<ApiJob> {
+    const url = `${API_BASE_URL}/api/jobs?id=${encodeURIComponent(jobId)}`;
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(updates),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(errorData.error || `Failed to update job: ${response.status} ${response.statusText}`);
+    }
+    return response.json();
+  },
+
+  async deleteJob(jobId: string): Promise<{ message: string }> {
+    const url = `${API_BASE_URL}/api/jobs?id=${encodeURIComponent(jobId)}`;
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(errorData.error || `Failed to delete job: ${response.status} ${response.statusText}`);
+    }
+    return response.json();
+  },
+
+  // Job Assignments
+  async getJobAssignments(filters?: {
+    startDate?: string;
+    endDate?: string;
+    userId?: string;
+  }): Promise<ApiJobAssignment[]> {
+    let url = `${API_BASE_URL}/api/job-assignments`;
+    const params = new URLSearchParams();
+    
+    if (filters?.startDate) params.append('startDate', filters.startDate);
+    if (filters?.endDate) params.append('endDate', filters.endDate);
+    if (filters?.userId) params.append('userId', filters.userId);
+    
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
+    
+    const response = await fetch(url, {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch job assignments: ${response.status} ${response.statusText}`);
+    }
+    return response.json();
+  },
+
+  async createJobAssignment(data: {
+    jobId: string;
+    userId: string;
+    technicianName?: string;
+    assignedDate: string;
+    assignedHours: number;
+    status?: string;
+    notes?: string;
+  }): Promise<ApiJobAssignment> {
+    const url = `${API_BASE_URL}/api/job-assignments`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(errorData.error || `Failed to create job assignment: ${response.status} ${response.statusText}`);
+    }
+    return response.json();
+  },
+
+  async updateJobAssignment(assignmentId: string, updates: Partial<{
+    userId: string;
+    technicianName: string;
+    assignedDate: string;
+    assignedHours: number;
+    actualHours: number;
+    status: string;
+    notes: string;
+  }>): Promise<ApiJobAssignment> {
+    const url = `${API_BASE_URL}/api/job-assignments?id=${encodeURIComponent(assignmentId)}`;
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(updates),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(errorData.error || `Failed to update job assignment: ${response.status} ${response.statusText}`);
+    }
+    return response.json();
+  },
+
+  async deleteJobAssignment(assignmentId: string): Promise<{ message: string }> {
+    const url = `${API_BASE_URL}/api/job-assignments?id=${encodeURIComponent(assignmentId)}`;
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(errorData.error || `Failed to delete job assignment: ${response.status} ${response.statusText}`);
     }
     return response.json();
   },

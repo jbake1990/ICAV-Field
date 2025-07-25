@@ -126,4 +126,67 @@ export interface CustomerReport {
   technicians: string[];
   averageHoursPerDay: number;
   entries: TimeEntry[];
+}
+
+// Job assignment system types
+export interface Job {
+  id: string;
+  title: string;
+  customerName: string;
+  description?: string;
+  location?: string;
+  estimatedHours: number;
+  status: JobStatus;
+  priority: 'low' | 'medium' | 'high';
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy: string; // User ID who created the job
+}
+
+export interface JobAssignment {
+  id: string;
+  jobId: string;
+  userId: string;
+  technicianName: string;
+  assignedDate: Date;
+  assignedHours: number;
+  actualHours?: number;
+  status: 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type JobStatus = 'draft' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+
+export interface CalendarEvent {
+  id: string;
+  jobId: string;
+  job: Job;
+  assignment: JobAssignment;
+  date: Date;
+  technicianId: string;
+  technicianName: string;
+}
+
+export interface CalendarFilters {
+  week?: Date;
+  technician?: string;
+  status?: JobStatus[];
+}
+
+// Job notes and AI summary types
+export interface JobNotes {
+  id: string;
+  timeEntryId: string;
+  userId: string;
+  jobId?: string;
+  originalText: string;
+  aiSummary?: string;
+  customerName: string;
+  workDescription?: string;
+  followUpSteps?: string;
+  isShared: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 } 

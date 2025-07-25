@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Clock, Users, Settings, Download, X, UserPlus, Trash2, LogOut, UserCheck, Shield, FileText } from 'lucide-react';
-import { TimeEntry, TimeEntryFilters, DashboardStats, User } from './types';
+import { Clock, Users, Settings, Download, X, UserPlus, Trash2, LogOut, UserCheck, Shield, FileText, Calendar } from 'lucide-react';
+import { TimeEntry, TimeEntryFilters, DashboardStats, User, Job, JobAssignment } from './types';
 import { api } from './services/api';
 import DashboardStatsComponent from './components/DashboardStats';
 import TimeEntryFiltersComponent from './components/TimeEntryFilters';
 import TimeEntryCard from './components/TimeEntryCard';
 import { LoginForm } from './components/LoginForm';
 import Reports from './components/Reports';
+import JobCalendar from './components/JobCalendar';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { formatDate, formatTime } from './utils/timeUtils';
 
@@ -16,8 +17,11 @@ function AppContent() {
   const [selectedEntry, setSelectedEntry] = useState<TimeEntry | null>(null);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [assignments, setAssignments] = useState<JobAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentView, setCurrentView] = useState<'dashboard' | 'calendar' | 'reports'>('dashboard');
   const [showSettings, setShowSettings] = useState(false);
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [showReports, setShowReports] = useState(false);
@@ -29,27 +33,35 @@ function AppContent() {
   const [showClearDatabaseConfirm, setShowClearDatabaseConfirm] = useState(false);
   const [deletingEntry, setDeletingEntry] = useState<string | null>(null);
 
-  // Clear time entries when user logs out
+  // Clear data when user logs out
   useEffect(() => {
     if (!authState.isAuthenticated) {
       setTimeEntries([]);
       setUsers([]);
+      setJobs([]);
+      setAssignments([]);
       setError(null);
     }
   }, [authState.isAuthenticated]);
 
-  // Load time entries from API
+  // Load all data from API
   useEffect(() => {
-    const loadTimeEntries = async () => {
-      // Only load time entries if user is authenticated
+    const loadData = async () => {
       if (!authState.isAuthenticated) {
-        console.log('User not authenticated, skipping time entries load');
+        console.log('User not authenticated, skipping data load');
         return;
       }
       
       try {
         setLoading(true);
-        const apiEntries = await api.getTimeEntries();
+        
+        // Load time entries, users, jobs, and assignments in parallel
+        const [apiEntries, apiUsers, apiJobs, apiAssignments] = await Promise.all([
+          api.getTimeEntries(),
+          authState.user?.role === 'admin' ? api.getUsers() : Promise.resolve([]),
+          api.getJobs(),
+          api.getJobAssignments()
+        ]);
         
         // Convert API data to frontend format
         const formattedEntries: TimeEntry[] = apiEntries.map(entry => ({
@@ -61,57 +73,41 @@ function AppContent() {
           driveStartTime: entry.driveStartTime ? new Date(entry.driveStartTime) : undefined,
           driveEndTime: entry.driveEndTime ? new Date(entry.driveEndTime) : undefined,
         }));
-        
-        console.log('API Response - Raw entries:', apiEntries);
-        console.log('API Response - Formatted entries:', formattedEntries);
-        console.log('Entries with drive time:', formattedEntries.filter(entry => entry.driveStartTime || entry.driveEndTime));
+
+        const formattedJobs: Job[] = apiJobs.map(job => ({
+          ...job,
+          status: job.status as Job['status'],
+          priority: job.priority as Job['priority'],
+          createdAt: new Date(job.createdAt),
+          updatedAt: new Date(job.updatedAt)
+        }));
+
+        const formattedAssignments: JobAssignment[] = apiAssignments.map(assignment => ({
+          ...assignment,
+          status: assignment.status as JobAssignment['status'],
+          assignedDate: new Date(assignment.assignedDate),
+          createdAt: new Date(assignment.createdAt),
+          updatedAt: new Date(assignment.updatedAt)
+        }));
         
         setTimeEntries(formattedEntries);
+        setUsers(apiUsers.map(user => ({
+          ...user,
+          role: (user as any).role || 'tech' as 'tech' | 'admin'
+        })));
+        setJobs(formattedJobs);
+        setAssignments(formattedAssignments);
         setError(null);
-      } catch (err) {
-        console.error('Failed to load time entries:', err);
-        console.error('Error details:', {
-          message: err instanceof Error ? err.message : 'Unknown error',
-          stack: err instanceof Error ? err.stack : undefined,
-          timestamp: new Date().toISOString()
-        });
-        setError('Failed to load time entries. Using sample data.');
-        // Fallback to mock data if API fails
-        const { mockTimeEntries } = await import('./data/mockData');
-        setTimeEntries(mockTimeEntries);
+      } catch (error) {
+        console.error('Failed to load data:', error);
+        setError(error instanceof Error ? error.message : 'Failed to load data');
       } finally {
         setLoading(false);
       }
     };
 
-    loadTimeEntries();
-  }, [authState.isAuthenticated]); // Add authState.isAuthenticated as dependency
-
-  // Load users from API
-  useEffect(() => {
-    const loadUsers = async () => {
-      // Only load users if user is authenticated
-      if (!authState.isAuthenticated) {
-        console.log('User not authenticated, skipping users load');
-        return;
-      }
-      
-      try {
-        const apiUsers = await api.getUsers();
-        const formattedUsers: User[] = apiUsers.map(user => ({
-          id: user.id,
-          username: user.username,
-          displayName: user.displayName,
-          role: (user as any).role || 'tech' // Default to tech role if not provided
-        }));
-        setUsers(formattedUsers);
-      } catch (err) {
-        console.error('Failed to load users:', err);
-      }
-    };
-
-    loadUsers();
-  }, [authState.isAuthenticated]); // Add authState.isAuthenticated as dependency
+    loadData();
+  }, [authState.isAuthenticated, authState.user?.role]);
 
   // Filter time entries based on current filters
   const filteredEntries = useMemo(() => {
@@ -352,6 +348,94 @@ function AppContent() {
       alert('Failed to delete entry. Please try again.');
     } finally {
       setDeletingEntry(null);
+    }
+  };
+
+  // Job management functions
+  const handleCreateJob = async (jobData: Omit<Job, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const newJob = await api.createJob(jobData);
+      
+      const formattedJob: Job = {
+        ...newJob,
+        status: newJob.status as Job['status'],
+        priority: newJob.priority as Job['priority'],
+        createdAt: new Date(newJob.createdAt),
+        updatedAt: new Date(newJob.updatedAt)
+      };
+      
+      setJobs(prev => [formattedJob, ...prev]);
+    } catch (error) {
+      console.error('Failed to create job:', error);
+      throw error;
+    }
+  };
+
+  const handleAssignJob = async (jobId: string, userId: string, date: Date, hours: number) => {
+    try {
+      const technician = users.find(u => u.id === userId);
+      if (!technician) {
+        throw new Error('Technician not found');
+      }
+
+      const newAssignment = await api.createJobAssignment({
+        jobId,
+        userId,
+        technicianName: technician.displayName,
+        assignedDate: date.toISOString().split('T')[0], // YYYY-MM-DD format
+        assignedHours: hours
+      });
+      
+      const formattedAssignment: JobAssignment = {
+        ...newAssignment,
+        status: newAssignment.status as JobAssignment['status'],
+        assignedDate: new Date(newAssignment.assignedDate),
+        createdAt: new Date(newAssignment.createdAt),
+        updatedAt: new Date(newAssignment.updatedAt)
+      };
+      
+      setAssignments(prev => [...prev, formattedAssignment]);
+    } catch (error) {
+      console.error('Failed to assign job:', error);
+      throw error;
+    }
+  };
+
+  const handleUpdateAssignment = async (assignmentId: string, updates: Partial<JobAssignment>) => {
+    try {
+      const updateData: any = {};
+      if (updates.userId) updateData.userId = updates.userId;
+      if (updates.technicianName) updateData.technicianName = updates.technicianName;
+      if (updates.assignedDate) updateData.assignedDate = updates.assignedDate.toISOString().split('T')[0];
+      if (updates.assignedHours !== undefined) updateData.assignedHours = updates.assignedHours;
+      if (updates.actualHours !== undefined) updateData.actualHours = updates.actualHours;
+      if (updates.status) updateData.status = updates.status;
+      if (updates.notes) updateData.notes = updates.notes;
+
+      const updatedAssignment = await api.updateJobAssignment(assignmentId, updateData);
+      
+      const formattedAssignment: JobAssignment = {
+        ...updatedAssignment,
+        status: updatedAssignment.status as JobAssignment['status'],
+        assignedDate: new Date(updatedAssignment.assignedDate),
+        createdAt: new Date(updatedAssignment.createdAt),
+        updatedAt: new Date(updatedAssignment.updatedAt)
+      };
+      
+      setAssignments(prev => prev.map(a => a.id === assignmentId ? formattedAssignment : a));
+    } catch (error) {
+      console.error('Failed to update assignment:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteAssignment = async (assignmentId: string) => {
+    try {
+      await api.deleteJobAssignment(assignmentId);
+      setAssignments(prev => prev.filter(a => a.id !== assignmentId));
+    } catch (error) {
+      console.error('Failed to delete assignment:', error);
+      throw error;
     }
   };
 
