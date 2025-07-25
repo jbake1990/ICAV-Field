@@ -47,6 +47,10 @@ export interface ApiUser {
   id: string;
   username: string;
   displayName: string;
+  email?: string;
+  role: 'tech' | 'admin';
+  isActive: boolean;
+  lastLogin?: string;
   createdAt: string;
   updatedAt: string;
 }

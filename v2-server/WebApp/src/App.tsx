@@ -93,7 +93,8 @@ function AppContent() {
         setTimeEntries(formattedEntries);
         setUsers(apiUsers.map(user => ({
           ...user,
-          role: (user as any).role || 'tech' as 'tech' | 'admin'
+          role: user.role || 'tech' as 'tech' | 'admin',
+          isActive: user.isActive !== undefined ? user.isActive : true
         })));
         setJobs(formattedJobs);
         setAssignments(formattedAssignments);
