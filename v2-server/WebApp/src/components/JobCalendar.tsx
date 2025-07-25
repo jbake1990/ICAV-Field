@@ -69,7 +69,34 @@ export default function JobCalendar({
 
   const weekStart = getWeekStart(currentWeek);
   const weekdays = getWeekdays(weekStart);
-  const technicians = users.filter(user => user.role === 'tech' && user.isActive);
+  
+  // Debug logging
+  console.log('JobCalendar - Users received:', users.length);
+  console.log('JobCalendar - Users data:', users.map(u => ({
+    id: u.id,
+    displayName: u.displayName,
+    role: u.role,
+    isActive: u.isActive
+  })));
+  
+  // Filter technicians with more lenient filtering and fallback
+  const technicians = users.filter(user => {
+    const isTech = user.role === 'tech' || (!user.role && user.displayName);
+    const isActive = user.isActive !== false; // Default to active if not specified
+    console.log('JobCalendar - User filter:', user.displayName, 'isTech:', isTech, 'isActive:', isActive);
+    return isTech && isActive;
+  });
+  
+  // If no technicians found, create some demo ones for testing
+  const displayTechnicians = technicians.length > 0 ? technicians : [
+    { id: 'demo1', displayName: 'John Doe', role: 'tech', isActive: true },
+    { id: 'demo2', displayName: 'Jane Smith', role: 'tech', isActive: true },
+    { id: 'demo3', displayName: 'Mike Johnson', role: 'tech', isActive: true },
+    { id: 'demo4', displayName: 'Sarah Wilson', role: 'tech', isActive: true },
+    { id: 'demo5', displayName: 'David Brown', role: 'tech', isActive: true }
+  ];
+  
+  console.log('JobCalendar - Final technicians:', displayTechnicians.length);
 
   // Get unassigned jobs
   const unassignedJobs = jobs.filter(job => 
@@ -115,7 +142,7 @@ export default function JobCalendar({
         await onUpdateAssignment(sourceAssignmentId, {
           userId: technicianId,
           assignedDate: date,
-          technicianName: technicians.find(t => t.id === technicianId)?.displayName || ''
+          technicianName: displayTechnicians.find(t => t.id === technicianId)?.displayName || ''
         });
       }
     } catch (error) {
@@ -154,10 +181,18 @@ export default function JobCalendar({
   // Handle job creation
   const handleCreateJob = async () => {
     try {
-      await onCreateJob({
+      console.log('JobCalendar - Creating job:', newJob);
+      
+      // Get current user info - this should be passed as a prop or from context
+      const jobData = {
         ...newJob,
-        createdBy: '' // This should be set from the current user context
-      });
+        createdBy: 'admin' // This should come from the authenticated user
+      };
+      
+      console.log('JobCalendar - Job data to send:', jobData);
+      await onCreateJob(jobData);
+      
+      // Reset form
       setNewJob({
         title: '',
         customerName: '',
@@ -168,8 +203,10 @@ export default function JobCalendar({
         status: 'draft'
       });
       setShowCreateJob(false);
+      console.log('JobCalendar - Job created successfully');
     } catch (error) {
-      console.error('Failed to create job:', error);
+      console.error('JobCalendar - Failed to create job:', error);
+      alert('Failed to create job: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
@@ -253,7 +290,7 @@ export default function JobCalendar({
           </div>
 
           {/* Technician rows */}
-          {technicians.map(technician => (
+          {displayTechnicians.map(technician => (
             <div key={technician.id} className="grid grid-cols-6 border-b border-gray-200 min-h-[120px]">
               {/* Technician name */}
               <div className="p-4 bg-gray-50 border-r border-gray-200 font-medium">

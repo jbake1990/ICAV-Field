@@ -58,7 +58,7 @@ function AppContent() {
         // Load time entries, users, jobs, and assignments in parallel
         const [apiEntries, apiUsers, apiJobs, apiAssignments] = await Promise.all([
           api.getTimeEntries(),
-          authState.user?.role === 'admin' ? api.getUsers() : Promise.resolve([]),
+          api.getUsers(), // Load users for everyone, not just admins (needed for calendar)
           api.getJobs(),
           api.getJobAssignments()
         ]);
