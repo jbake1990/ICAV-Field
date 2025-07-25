@@ -52,7 +52,8 @@ CREATE INDEX IF NOT EXISTS idx_time_entries_clock_in_time ON time_entries(clock_
 CREATE INDEX IF NOT EXISTS idx_time_entries_technician_name ON time_entries(technician_name);
 CREATE INDEX IF NOT EXISTS idx_time_entries_customer_name ON time_entries(customer_name);
 CREATE INDEX IF NOT EXISTS idx_time_entries_drive_start_time ON time_entries(drive_start_time);
-CREATE INDEX IF NOT EXISTS idx_time_entries_drive_end_time ON time_entries(drive_end_time);CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_time_entries_drive_end_time ON time_entries(drive_end_time);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_token ON user_sessions(session_token);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
@@ -60,16 +61,16 @@ CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
 -- Add default admin user (password: admin123)
 -- Note: In production, change this password immediately!
 INSERT INTO users (username, display_name, email, password_hash, role) VALUES 
-    ('admin', 'System Administrator', 'admin@icav.com', '$2b$10$rOK0G7GbYhF6QM3xN8vQa.XfLt0K7ZBjYk8pN2mT5J6NG1K.EGBfC', 'admin')
+    ('admin', 'System Administrator', 'admin@icav.com', '$2a$10$rOK0G7GbYhF6QM3xN8vQa.XfLt0K7ZBjYk8pN2mT5J6NG1K.EGBfC', 'admin')
 ON CONFLICT (username) DO NOTHING;
 
 -- Sample tech users (password: tech123 for all)
 INSERT INTO users (username, display_name, email, password_hash, role) VALUES 
-    ('john.doe', 'John Doe', 'john@icav.com', '$2b$10$yHvTpQKrwGZ7F4L8P9rM8eK6jQ1N9LxJ5MgH0T3R6XB8uM7pZ.Qkm', 'tech'),
-    ('jane.smith', 'Jane Smith', 'jane@icav.com', '$2b$10$yHvTpQKrwGZ7F4L8P9rM8eK6jQ1N9LxJ5MgH0T3R6XB8uM7pZ.Qkm', 'tech'),
-    ('mike.johnson', 'Mike Johnson', 'mike@icav.com', '$2b$10$yHvTpQKrwGZ7F4L8P9rM8eK6jQ1N9LxJ5MgH0T3R6XB8uM7pZ.Qkm', 'tech'),
-    ('sarah.wilson', 'Sarah Wilson', 'sarah@icav.com', '$2b$10$yHvTpQKrwGZ7F4L8P9rM8eK6jQ1N9LxJ5MgH0T3R6XB8uM7pZ.Qkm', 'tech'),
-    ('david.brown', 'David Brown', 'david@icav.com', '$2b$10$yHvTpQKrwGZ7F4L8P9rM8eK6jQ1N9LxJ5MgH0T3R6XB8uM7pZ.Qkm', 'tech')
+    ('john.doe', 'John Doe', 'john@icav.com', '$2a$10$yHvTpQKrwGZ7F4L8P9rM8eK6jQ1N9LxJ5MgH0T3R6XB8uM7pZ.Qkm', 'tech'),
+    ('jane.smith', 'Jane Smith', 'jane@icav.com', '$2a$10$yHvTpQKrwGZ7F4L8P9rM8eK6jQ1N9LxJ5MgH0T3R6XB8uM7pZ.Qkm', 'tech'),
+    ('mike.johnson', 'Mike Johnson', 'mike@icav.com', '$2a$10$yHvTpQKrwGZ7F4L8P9rM8eK6jQ1N9LxJ5MgH0T3R6XB8uM7pZ.Qkm', 'tech'),
+    ('sarah.wilson', 'Sarah Wilson', 'sarah@icav.com', '$2a$10$yHvTpQKrwGZ7F4L8P9rM8eK6jQ1N9LxJ5MgH0T3R6XB8uM7pZ.Qkm', 'tech'),
+    ('david.brown', 'David Brown', 'david@icav.com', '$2a$10$yHvTpQKrwGZ7F4L8P9rM8eK6jQ1N9LxJ5MgH0T3R6XB8uM7pZ.Qkm', 'tech')
 ON CONFLICT (username) DO NOTHING; 
 
 -- Job status enum
