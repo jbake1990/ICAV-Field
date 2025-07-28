@@ -173,51 +173,70 @@ export default function JobCalendar({
 
   // Handle drag start for jobs
   const handleDragStart = (e: React.DragEvent, job: Job, sourceType: 'unassigned' | 'calendar', assignmentId?: string) => {
+    // Stop propagation to prevent interference with technician drag/drop
+    e.stopPropagation();
     setDraggedJob({ job, sourceType, sourceAssignmentId: assignmentId });
     e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('application/json', JSON.stringify({ jobId: job.id, sourceType, assignmentId }));
+    e.dataTransfer.setData('drag-type', 'job');
   };
 
   // Handle technician drag start
   const handleTechnicianDragStart = (e: React.DragEvent, technicianId: string) => {
+    // Stop propagation to prevent interference with job drag/drop
+    e.stopPropagation();
     setDraggedTechnician(technicianId);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', technicianId);
+    e.dataTransfer.setData('drag-type', 'technician');
   };
 
   // Handle technician drag over
   const handleTechnicianDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    // Only handle if it's a technician being dragged
+    if (e.dataTransfer.types.includes('text/plain') && draggedTechnician) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = 'move';
+    }
   };
 
   // Handle technician drop
   const handleTechnicianDrop = (e: React.DragEvent, targetTechnicianId: string) => {
-    e.preventDefault();
-    
-    if (!draggedTechnician || draggedTechnician === targetTechnicianId) {
+    // Only handle if it's a technician being dragged
+    if (draggedTechnician) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (draggedTechnician === targetTechnicianId) {
+        setDraggedTechnician(null);
+        return;
+      }
+
+      const newOrder = [...technicianOrder];
+      const draggedIndex = newOrder.indexOf(draggedTechnician);
+      const targetIndex = newOrder.indexOf(targetTechnicianId);
+
+      if (draggedIndex !== -1 && targetIndex !== -1) {
+        // Remove dragged item and insert at target position
+        newOrder.splice(draggedIndex, 1);
+        newOrder.splice(targetIndex, 0, draggedTechnician);
+        setTechnicianOrder(newOrder);
+      }
+
       setDraggedTechnician(null);
-      return;
     }
-
-    const newOrder = [...technicianOrder];
-    const draggedIndex = newOrder.indexOf(draggedTechnician);
-    const targetIndex = newOrder.indexOf(targetTechnicianId);
-
-    if (draggedIndex !== -1 && targetIndex !== -1) {
-      // Remove dragged item and insert at target position
-      newOrder.splice(draggedIndex, 1);
-      newOrder.splice(targetIndex, 0, draggedTechnician);
-      setTechnicianOrder(newOrder);
-    }
-
-    setDraggedTechnician(null);
   };
 
-  // Handle drop
+  // Handle drop for jobs
   const handleDrop = async (e: React.DragEvent, technicianId: string, date: Date) => {
-    e.preventDefault();
+    // Only handle job drops, not technician drops
+    if (!draggedJob || draggedTechnician) {
+      return;
+    }
     
-    if (!draggedJob) return;
+    e.preventDefault();
+    e.stopPropagation();
 
     const { job, sourceType, sourceAssignmentId } = draggedJob;
 
@@ -240,10 +259,14 @@ export default function JobCalendar({
     setDraggedJob(null);
   };
 
-  // Handle drag over
+  // Handle drag over for jobs
   const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    // Only handle job drags, not technician drags
+    if (draggedJob && !draggedTechnician) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = 'move';
+    }
   };
 
   // Calculate total hours for a day
@@ -402,13 +425,15 @@ export default function JobCalendar({
               className={`grid grid-cols-6 border-b border-gray-200 min-h-[120px] transition-all duration-200 ${
                 draggedTechnician === technician.id ? 'opacity-50 bg-blue-50' : 'hover:bg-gray-50'
               }`}
-              draggable
-              onDragStart={(e) => handleTechnicianDragStart(e, technician.id)}
-              onDragOver={handleTechnicianDragOver}
-              onDrop={(e) => handleTechnicianDrop(e, technician.id)}
             >
               {/* Technician name with drag handle */}
-              <div className="p-4 bg-gray-50 border-r border-gray-200 font-medium flex items-center group">
+              <div 
+                className="p-4 bg-gray-50 border-r border-gray-200 font-medium flex items-center group"
+                draggable
+                onDragStart={(e) => handleTechnicianDragStart(e, technician.id)}
+                onDragOver={handleTechnicianDragOver}
+                onDrop={(e) => handleTechnicianDrop(e, technician.id)}
+              >
                 <GripVertical 
                   className="w-4 h-4 text-gray-400 mr-3 cursor-grab group-hover:text-gray-600 transition-colors" 
                 />
