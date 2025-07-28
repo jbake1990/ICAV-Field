@@ -20,6 +20,10 @@ struct TimeEntry: Identifiable, Codable {
     var driveStartTime: Date?
     var driveEndTime: Date?
     
+    // Job notes and AI summary
+    var jobNotes: String = ""
+    var aiSummary: String = ""
+    
     // Sync tracking
     var serverId: String? // ID from the server after successful sync
     var isSynced: Bool = false // Whether this entry has been synced to server
@@ -30,7 +34,7 @@ struct TimeEntry: Identifiable, Codable {
     var markedForDeletion: Bool = false // Whether this entry is marked for deletion
     
     // Custom initializer to generate UUID
-    init(userId: String, technicianName: String, customerName: String, clockInTime: Date, clockOutTime: Date? = nil, lunchStartTime: Date? = nil, lunchEndTime: Date? = nil, driveStartTime: Date? = nil, driveEndTime: Date? = nil) {
+    init(userId: String, technicianName: String, customerName: String, clockInTime: Date, clockOutTime: Date? = nil, lunchStartTime: Date? = nil, lunchEndTime: Date? = nil, driveStartTime: Date? = nil, driveEndTime: Date? = nil, jobNotes: String = "", aiSummary: String = "") {
         self.id = UUID()
         self.userId = userId
         self.technicianName = technicianName
@@ -41,6 +45,8 @@ struct TimeEntry: Identifiable, Codable {
         self.lunchEndTime = lunchEndTime
         self.driveStartTime = driveStartTime
         self.driveEndTime = driveEndTime
+        self.jobNotes = jobNotes
+        self.aiSummary = aiSummary
     }
     
     // Initializer for driving entries (without clockInTime)
@@ -55,6 +61,8 @@ struct TimeEntry: Identifiable, Codable {
         self.lunchEndTime = nil
         self.driveStartTime = driveStartTime
         self.driveEndTime = nil
+        self.jobNotes = ""
+        self.aiSummary = ""
     }
     
     // New initializer for a job with no clock-in or drive time
@@ -69,6 +77,8 @@ struct TimeEntry: Identifiable, Codable {
         self.lunchEndTime = nil
         self.driveStartTime = nil
         self.driveEndTime = nil
+        self.jobNotes = ""
+        self.aiSummary = ""
         self.serverId = nil
         self.isSynced = false
         self.needsSync = false

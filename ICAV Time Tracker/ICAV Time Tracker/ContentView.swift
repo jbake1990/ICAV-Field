@@ -663,20 +663,90 @@ struct ContentView: View {
     private func handleJobNotesComplete(notes: String, summary: String) {
         guard let entry = jobNotesEntry else { return }
         
-        // TODO: Save notes and summary to the time entry
-        // TODO: Share functionality
-        // TODO: Send to server
+        Task {
+            do {
+                // Update the TimeEntry with notes and summary
+                var updatedEntry = entry
+                updatedEntry.jobNotes = notes
+                updatedEntry.aiSummary = summary
+                updatedEntry.clockOutTime = Date()
+                
+                // Sync to server first
+                let success = await syncTimeEntryToServer(updatedEntry)
+                
+                if success {
+                    print("✅ Successfully synced to server")
+                    
+                    // Generate PDF
+                    let report = pdfGenerator.createJobReport(
+                        from: updatedEntry,
+                        jobNotes: notes,
+                        aiSummary: summary
+                    )
+                    
+                    if let pdfData = pdfGenerator.generateJobSummaryPDF(for: report) {
+                        let fileName = pdfGenerator.generateFileName(for: report)
+                        
+                        // Save locally
+                        if let savedURL = pdfGenerator.saveToDocuments(pdfData: pdfData, fileName: fileName) {
+                            print("📄 PDF saved to: \(savedURL)")
+                            
+                            // Offer sharing
+                            await MainActor.run {
+                                shareManager.sharePDF(pdfData: pdfData, fileName: fileName)
+                            }
+                        }
+                    }
+                    
+                    // Complete the clock out in the view model
+                    await MainActor.run {
+                        viewModel.clockOut()
+                    }
+                } else {
+                    print("❌ Failed to sync to server")
+                    // TODO: Handle sync failure - maybe store locally for later sync
+                    
+                    // Still clock out even if sync fails
+                    await MainActor.run {
+                        viewModel.clockOut()
+                    }
+                }
+                
+                // Close the modal
+                await MainActor.run {
+                    showingJobNotesModal = false
+                    jobNotesEntry = nil
+                    jobNotesText = ""
+                    aiSummary = ""
+                }
+                
+            } catch {
+                print("💥 Error in handleJobNotesComplete: \(error)")
+                
+                // Even if there's an error, close the modal and clock out
+                await MainActor.run {
+                    viewModel.clockOut()
+                    showingJobNotesModal = false
+                    jobNotesEntry = nil
+                    jobNotesText = ""
+                    aiSummary = ""
+                }
+            }
+        }
         
-        // For now, actually clock out
-        viewModel.clockOut()
-        
-        // Close modal
-        showingJobNotesModal = false
-        jobNotesEntry = nil
-        jobNotesText = ""
-        aiSummary = ""
-        
-        print("📝 Job notes saved - Notes: \(notes), Summary: \(summary)")
+        print("📝 Job notes processing started - Notes: \(notes), Summary: \(summary)")
+    }
+    
+    private func syncTimeEntryToServer(_ timeEntry: TimeEntry) async -> Bool {
+        // TODO: Implement actual server sync using APIService
+        // For now, simulate success
+        do {
+            // Simulate network delay
+            try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+            return true
+        } catch {
+            return false
+        }
     }
 }
 
@@ -719,6 +789,8 @@ struct JobNotesModal: View {
     
     @StateObject private var speechManager = SpeechRecognitionManager()
     @StateObject private var openAIService = OpenAIService()
+    @StateObject private var pdfGenerator = PDFGenerator()
+    @StateObject private var shareManager = ShareManager()
     
     var body: some View {
         NavigationView {
@@ -876,6 +948,17 @@ struct JobNotesModal: View {
                 }
             } message: {
                 Text(openAIService.errorMessage)
+            }
+            .shareSheet(
+                isPresented: $shareManager.isSharePresented,
+                items: shareManager.shareItems
+            ) { activityType, completed in
+                if completed {
+                    print("📤 Share completed with: \(activityType?.rawValue ?? "unknown")")
+                } else {
+                    print("📤 Share cancelled")
+                }
+                shareManager.cleanup()
             }
         }
     }

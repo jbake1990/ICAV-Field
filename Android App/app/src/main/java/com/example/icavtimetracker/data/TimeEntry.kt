@@ -26,6 +26,12 @@ data class TimeEntry(
     @SerializedName("driveEndTime")
     var driveEndTime: Date? = null,
     
+    // Job notes and AI summary
+    @SerializedName("jobNotes")
+    var jobNotes: String = "",
+    @SerializedName("aiSummary")
+    var aiSummary: String = "",
+    
     // Sync tracking
     @SerializedName("serverId")
     var serverId: String? = null,

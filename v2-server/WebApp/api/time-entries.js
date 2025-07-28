@@ -121,6 +121,8 @@ module.exports = async function handler(req, res) {
             lunch_end_time,
             drive_start_time,
             drive_end_time,
+            job_notes,
+            ai_summary,
             created_at,
             updated_at
           FROM time_entries 
@@ -142,6 +144,8 @@ module.exports = async function handler(req, res) {
             lunch_end_time,
             drive_start_time,
             drive_end_time,
+            job_notes,
+            ai_summary,
             created_at,
             updated_at
           FROM time_entries 
@@ -172,6 +176,8 @@ module.exports = async function handler(req, res) {
           lunchEndTime: row.lunch_end_time ? new Date(row.lunch_end_time).toISOString() : undefined,
           driveStartTime: row.drive_start_time ? new Date(row.drive_start_time).toISOString() : undefined,
           driveEndTime: row.drive_end_time ? new Date(row.drive_end_time).toISOString() : undefined,
+          jobNotes: row.job_notes || "",
+          aiSummary: row.ai_summary || "",
           isActive: !row.clock_out_time && (row.clock_in_time || row.drive_start_time),
           isOnLunch: row.lunch_start_time && !row.lunch_end_time,
           isDriving: row.drive_start_time && !row.drive_end_time,
@@ -209,7 +215,9 @@ module.exports = async function handler(req, res) {
           lunchStartTime: row.lunch_start_time ? new Date(row.lunch_start_time).toISOString() : undefined,
           lunchEndTime: row.lunch_end_time ? new Date(row.lunch_end_time).toISOString() : undefined,
           driveStartTime: row.drive_start_time ? new Date(row.drive_start_time).toISOString() : undefined,
-          driveEndTime: row.drive_end_time ? new Date(row.drive_end_time).toISOString() : undefined
+          driveEndTime: row.drive_end_time ? new Date(row.drive_end_time).toISOString() : undefined,
+          jobNotes: row.job_notes || "",
+          aiSummary: row.ai_summary || ""
         }));
         
         console.log('Returning mobile-formatted data for', formattedRows.length, 'entries');
@@ -263,10 +271,12 @@ module.exports = async function handler(req, res) {
         lunchStartTime: req.body.lunchStartTime,
         lunchEndTime: req.body.lunchEndTime,
         driveStartTime: req.body.driveStartTime,
-        driveEndTime: req.body.driveEndTime
+        driveEndTime: req.body.driveEndTime,
+        jobNotes: req.body.jobNotes,
+        aiSummary: req.body.aiSummary
       });
       
-      const { id, technicianName, customerName, clockInTime, clockOutTime, lunchStartTime, lunchEndTime, driveStartTime, driveEndTime } = req.body;
+      const { id, technicianName, customerName, clockInTime, clockOutTime, lunchStartTime, lunchEndTime, driveStartTime, driveEndTime, jobNotes, aiSummary } = req.body;
 
       // Determine the target user ID for the entry
       // Admins can specify any user ID, regular users can only use their own
@@ -315,6 +325,8 @@ module.exports = async function handler(req, res) {
               lunch_end_time = ${lunchEndTime},
               drive_start_time = ${driveStartTime},
               drive_end_time = ${driveEndTime},
+              job_notes = ${jobNotes || ""},
+              ai_summary = ${aiSummary || ""},
               updated_at = NOW()
             WHERE id = ${id}
               AND (updated_at IS NULL OR updated_at <= ${req.body.lastModified || new Date()})
@@ -338,7 +350,9 @@ module.exports = async function handler(req, res) {
               lunchStartTime: updateRows[0].lunch_start_time,
               lunchEndTime: updateRows[0].lunch_end_time,
               driveStartTime: updateRows[0].drive_start_time,
-              driveEndTime: updateRows[0].drive_end_time
+              driveEndTime: updateRows[0].drive_end_time,
+              jobNotes: updateRows[0].job_notes || "",
+              aiSummary: updateRows[0].ai_summary || ""
             };
             
             console.log('Sending formatted response:', formattedResponse);
@@ -364,7 +378,9 @@ module.exports = async function handler(req, res) {
         lunchStartTime, 
         lunchEndTime,
         driveStartTime,
-        driveEndTime
+        driveEndTime,
+        jobNotes: jobNotes || "",
+        aiSummary: aiSummary || ""
       });
       
       // Check for existing active entry for the same customer and user
@@ -413,7 +429,9 @@ module.exports = async function handler(req, res) {
           lunch_start_time, 
           lunch_end_time,
           drive_start_time,
-          drive_end_time
+          drive_end_time,
+          job_notes,
+          ai_summary
         ) 
         VALUES (
           ${targetUserId}, 
@@ -424,7 +442,9 @@ module.exports = async function handler(req, res) {
           ${lunchStartTime}, 
           ${lunchEndTime},
           ${driveStartTime},
-          ${driveEndTime}
+          ${driveEndTime},
+          ${jobNotes || ""},
+          ${aiSummary || ""}
         )
         RETURNING *
       `;
@@ -442,7 +462,9 @@ module.exports = async function handler(req, res) {
         lunchStartTime: rows[0].lunch_start_time,
         lunchEndTime: rows[0].lunch_end_time,
         driveStartTime: rows[0].drive_start_time,
-        driveEndTime: rows[0].drive_end_time
+        driveEndTime: rows[0].drive_end_time,
+        jobNotes: rows[0].job_notes || "",
+        aiSummary: rows[0].ai_summary || ""
       };
       
       res.status(201).json(formattedResponse);

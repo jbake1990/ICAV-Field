@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS time_entries (
     lunch_end_time TIMESTAMPTZ,
     drive_start_time TIMESTAMPTZ,
     drive_end_time TIMESTAMPTZ,
+    job_notes TEXT DEFAULT '',
+    ai_summary TEXT DEFAULT '',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -127,7 +129,8 @@ CREATE TABLE IF NOT EXISTS job_notes (
 
 -- Add job_id to time_entries table for linking
 ALTER TABLE time_entries ADD COLUMN IF NOT EXISTS job_id UUID REFERENCES jobs(id) ON DELETE SET NULL;
-ALTER TABLE time_entries ADD COLUMN IF NOT EXISTS job_notes TEXT;
+ALTER TABLE time_entries ADD COLUMN IF NOT EXISTS job_notes TEXT DEFAULT '';
+ALTER TABLE time_entries ADD COLUMN IF NOT EXISTS ai_summary TEXT DEFAULT '';
 
 -- Indexes for new tables
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);

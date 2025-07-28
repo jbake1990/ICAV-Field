@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Internal storage cache directory -->
+    <cache-path name="cache" path="." />
+    
+    <!-- External files directory -->
+    <external-files-path name="external_files" path="." />
+    
+    <!-- Specific directory for ICAV reports -->
+    <external-files-path name="icav_reports" path="ICAV_Reports/" />
+    
+    <!-- External cache directory -->
+    <external-cache-path name="external_cache" path="." />
+</paths> 

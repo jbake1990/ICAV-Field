@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.icavtimetracker.OpenAIService
+import com.example.icavtimetracker.PDFGenerator
+import com.example.icavtimetracker.ShareManager
 import com.example.icavtimetracker.SpeechRecognitionManager
 import com.example.icavtimetracker.data.ClockStatus
 import com.example.icavtimetracker.data.TimeEntry
@@ -31,6 +33,8 @@ import java.util.*
 import java.util.Calendar
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -430,20 +434,85 @@ fun MainScreen(
             isGeneratingSummary = isGeneratingSummary,
             onGeneratingSummaryChange = { isGeneratingSummary = it },
             onSave = { notes, summary ->
-                // TODO: Save notes and summary to the time entry
-                // TODO: Share functionality
-                // TODO: Send to server
+                CoroutineScope(Dispatchers.Main).launch {
+                    try {
+                        // Update the TimeEntry with notes and summary
+                        val updatedEntry = jobNotesEntry?.copy(
+                            jobNotes = notes,
+                            aiSummary = summary,
+                            clockOutTime = java.util.Date()
+                        )
+                        
+                        if (updatedEntry != null) {
+                            // Sync to server first
+                            val success = syncTimeEntryToServer(updatedEntry)
+                            
+                            if (success) {
+                                println("✅ Successfully synced to server")
+                                
+                                // Generate PDF
+                                val report = pdfGenerator.createJobReport(
+                                    timeEntry = updatedEntry,
+                                    jobNotes = notes,
+                                    aiSummary = summary
+                                )
+                                
+                                val pdfData = withContext(Dispatchers.IO) {
+                                    pdfGenerator.generateJobSummaryPDF(report)
+                                }
+                                
+                                if (pdfData != null) {
+                                    val fileName = pdfGenerator.generateFileName(report)
+                                    
+                                    // Save locally
+                                    val savedFile = withContext(Dispatchers.IO) {
+                                        pdfGenerator.saveToExternalStorage(pdfData, fileName)
+                                    }
+                                    
+                                    if (savedFile != null) {
+                                        println("📄 PDF saved to: ${savedFile.absolutePath}")
+                                        
+                                        // Offer sharing
+                                        val shareIntent = shareManager.sharePDFFromByteArray(
+                                            pdfData = pdfData,
+                                            fileName = fileName,
+                                            title = "Share Job Summary - ${updatedEntry.customerName}"
+                                        )
+                                        
+                                        shareIntent?.let {
+                                            context.startActivity(it)
+                                        }
+                                    }
+                                }
+                                
+                                // Complete the clock out
+                                viewModel.clockOut()
+                            } else {
+                                println("❌ Failed to sync to server")
+                                // Still clock out even if sync fails
+                                viewModel.clockOut()
+                            }
+                        }
+                        
+                        // Close dialog
+                        showJobNotesDialog = false
+                        jobNotesEntry = null
+                        jobNotesText = ""
+                        aiSummary = ""
+                        
+                    } catch (e: Exception) {
+                        println("💥 Error in save process: ${e.message}")
+                        
+                        // Even if there's an error, close dialog and clock out
+                        viewModel.clockOut()
+                        showJobNotesDialog = false
+                        jobNotesEntry = null
+                        jobNotesText = ""
+                        aiSummary = ""
+                    }
+                }
                 
-                // For now, actually clock out
-                viewModel.clockOut()
-                
-                // Close dialog
-                showJobNotesDialog = false
-                jobNotesEntry = null
-                jobNotesText = ""
-                aiSummary = ""
-                
-                println("📝 Job notes saved - Notes: $notes, Summary: $summary")
+                println("📝 Job notes processing started - Notes: $notes, Summary: $summary")
             },
             onCancel = {
                 showJobNotesDialog = false
@@ -1891,6 +1960,8 @@ fun JobNotesDialog(
     val context = LocalContext.current
     val speechManager = remember { SpeechRecognitionManager(context) }
     val openAIService = remember { OpenAIService() }
+    val pdfGenerator = remember { PDFGenerator(context) }
+    val shareManager = remember { ShareManager(context) }
     val speechRecognizedText by speechManager.recognizedText.collectAsStateWithLifecycle()
     val speechIsRecording by speechManager.isRecording.collectAsStateWithLifecycle()
     val speechErrorMessage by speechManager.errorMessage.collectAsStateWithLifecycle()
@@ -2089,5 +2160,17 @@ fun JobNotesDialog(
                 }
             }
         )
+    }
+}
+
+private suspend fun syncTimeEntryToServer(timeEntry: TimeEntry): Boolean {
+    // TODO: Implement actual server sync using APIService
+    // For now, simulate success
+    return try {
+        // Simulate network delay
+        delay(1000) // 1 second
+        true
+    } catch (e: Exception) {
+        false
     }
 }
