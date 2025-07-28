@@ -30,8 +30,14 @@ class SpeechRecognitionManager: NSObject, ObservableObject {
         
         // Request microphone permission
         let microphoneAuth = await withCheckedContinuation { continuation in
-            AVAudioSession.sharedInstance().requestRecordPermission { granted in
-                continuation.resume(returning: granted)
+            if #available(iOS 17.0, *) {
+                AVAudioApplication.shared.requestRecordPermission { granted in
+                    continuation.resume(returning: granted)
+                }
+            } else {
+                AVAudioSession.sharedInstance().requestRecordPermission { granted in
+                    continuation.resume(returning: granted)
+                }
             }
         }
         
@@ -47,7 +53,7 @@ class SpeechRecognitionManager: NSObject, ObservableObject {
     }
     
     func startRecording() async {
-        guard isAuthorized else {
+        if !isAuthorized {
             let authorized = await requestPermissions()
             guard authorized else { return }
         }

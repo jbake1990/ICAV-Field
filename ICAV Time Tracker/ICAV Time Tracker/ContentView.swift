@@ -11,6 +11,8 @@ struct ContentView: View {
     enum ButtonState { case unavailable, available, active }
     @StateObject private var authManager = AuthManager()
     @StateObject private var viewModel: TimeTrackerViewModel
+    @StateObject private var pdfGenerator = PDFGenerator()
+    @StateObject private var shareManager = ShareManager()
     @State private var showingExportSheet = false
     // Add these:
     @State private var selectedJob: TimeEntry? = nil
@@ -789,8 +791,6 @@ struct JobNotesModal: View {
     
     @StateObject private var speechManager = SpeechRecognitionManager()
     @StateObject private var openAIService = OpenAIService()
-    @StateObject private var pdfGenerator = PDFGenerator()
-    @StateObject private var shareManager = ShareManager()
     
     var body: some View {
         NavigationView {
@@ -917,7 +917,7 @@ struct JobNotesModal: View {
             }
             .padding()
             .navigationBarHidden(true)
-            .onChange(of: speechManager.recognizedText) { newText in
+            .onChange(of: speechManager.recognizedText) { oldValue, newText in
                 if !newText.isEmpty {
                     // Append recognized text to existing notes
                     if jobNotesText.isEmpty {
@@ -927,7 +927,7 @@ struct JobNotesModal: View {
                     }
                 }
             }
-            .onChange(of: speechManager.isRecording) { recording in
+            .onChange(of: speechManager.isRecording) { oldValue, recording in
                 isRecording = recording
             }
             .onAppear {
@@ -971,7 +971,7 @@ struct JobNotesModal: View {
             do {
                 let summary = try await openAIService.summarizeJobNotes(
                     jobNotesText,
-                    customerName: jobNotesEntry?.customerName ?? ""
+                    customerName: entry?.customerName ?? ""
                 )
                 await MainActor.run {
                     aiSummary = summary.fullSummary

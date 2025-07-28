@@ -378,7 +378,7 @@ class TimeTrackerViewModel: ObservableObject {
         }
     }
     
-    private func showAlert(_ message: String) {
+    func showAlert(_ message: String) {
         alertMessage = message
         showingAlert = true
     }
