@@ -298,7 +298,8 @@ struct ContentView: View {
                         jobNotesEntry = nil
                         jobNotesText = ""
                         aiSummary = ""
-                    }
+                    },
+                    shareManager: shareManager
                 )
             }
             .padding(.horizontal)
@@ -666,73 +667,59 @@ struct ContentView: View {
         guard let entry = jobNotesEntry else { return }
         
         Task {
-            do {
-                // Update the TimeEntry with notes and summary
-                var updatedEntry = entry
-                updatedEntry.jobNotes = notes
-                updatedEntry.aiSummary = summary
-                updatedEntry.clockOutTime = Date()
+            // Update the TimeEntry with notes and summary
+            var updatedEntry = entry
+            updatedEntry.jobNotes = notes
+            updatedEntry.aiSummary = summary
+            updatedEntry.clockOutTime = Date()
+            
+            // Sync to server first
+            let success = await syncTimeEntryToServer(updatedEntry)
+            
+            if success {
+                print("✅ Successfully synced to server")
                 
-                // Sync to server first
-                let success = await syncTimeEntryToServer(updatedEntry)
+                // Generate PDF
+                let report = pdfGenerator.createJobReport(
+                    from: updatedEntry,
+                    jobNotes: notes,
+                    aiSummary: summary
+                )
                 
-                if success {
-                    print("✅ Successfully synced to server")
+                if let pdfData = pdfGenerator.generateJobSummaryPDF(for: report) {
+                    let fileName = pdfGenerator.generateFileName(for: report)
                     
-                    // Generate PDF
-                    let report = pdfGenerator.createJobReport(
-                        from: updatedEntry,
-                        jobNotes: notes,
-                        aiSummary: summary
-                    )
-                    
-                    if let pdfData = pdfGenerator.generateJobSummaryPDF(for: report) {
-                        let fileName = pdfGenerator.generateFileName(for: report)
+                    // Save locally
+                    if let savedURL = pdfGenerator.saveToDocuments(pdfData: pdfData, fileName: fileName) {
+                        print("📄 PDF saved to: \(savedURL)")
                         
-                        // Save locally
-                        if let savedURL = pdfGenerator.saveToDocuments(pdfData: pdfData, fileName: fileName) {
-                            print("📄 PDF saved to: \(savedURL)")
-                            
-                            // Offer sharing
-                            await MainActor.run {
-                                shareManager.sharePDF(pdfData: pdfData, fileName: fileName)
-                            }
+                        // Offer sharing
+                        await MainActor.run {
+                            shareManager.sharePDF(pdfData: pdfData, fileName: fileName)
                         }
                     }
-                    
-                    // Complete the clock out in the view model
-                    await MainActor.run {
-                        viewModel.clockOut()
-                    }
-                } else {
-                    print("❌ Failed to sync to server")
-                    // TODO: Handle sync failure - maybe store locally for later sync
-                    
-                    // Still clock out even if sync fails
-                    await MainActor.run {
-                        viewModel.clockOut()
-                    }
                 }
                 
-                // Close the modal
-                await MainActor.run {
-                    showingJobNotesModal = false
-                    jobNotesEntry = nil
-                    jobNotesText = ""
-                    aiSummary = ""
-                }
-                
-            } catch {
-                print("💥 Error in handleJobNotesComplete: \(error)")
-                
-                // Even if there's an error, close the modal and clock out
+                // Complete the clock out in the view model
                 await MainActor.run {
                     viewModel.clockOut()
-                    showingJobNotesModal = false
-                    jobNotesEntry = nil
-                    jobNotesText = ""
-                    aiSummary = ""
                 }
+            } else {
+                print("❌ Failed to sync to server")
+                // TODO: Handle sync failure - maybe store locally for later sync
+                
+                // Still clock out even if sync fails
+                await MainActor.run {
+                    viewModel.clockOut()
+                }
+            }
+            
+            // Close the modal
+            await MainActor.run {
+                showingJobNotesModal = false
+                jobNotesEntry = nil
+                jobNotesText = ""
+                aiSummary = ""
             }
         }
         
@@ -788,6 +775,7 @@ struct JobNotesModal: View {
     @Binding var isGeneratingSummary: Bool
     let onSave: (String, String) -> Void
     let onCancel: () -> Void
+    @ObservedObject var shareManager: ShareManager
     
     @StateObject private var speechManager = SpeechRecognitionManager()
     @StateObject private var openAIService = OpenAIService()
