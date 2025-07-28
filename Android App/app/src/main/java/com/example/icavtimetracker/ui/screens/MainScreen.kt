@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +36,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,6 +50,22 @@ fun MainScreen(
     val timeEntries by viewModel.timeEntries.collectAsStateWithLifecycle()
     val pendingSyncCount by viewModel.pendingSyncCount.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
+    
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    
+    // Services for job notes functionality
+    val speechManager = remember { SpeechRecognitionManager(context) }
+    val openAIService = remember { OpenAIService() }
+    val pdfGenerator = remember { PDFGenerator(context) }
+    val shareManager = remember { ShareManager(context) }
+    
+    // Collect service states
+    val speechRecognizedText by speechManager.recognizedText.collectAsStateWithLifecycle()
+    val speechIsRecording by speechManager.isRecording.collectAsStateWithLifecycle()
+    val speechErrorMessage by speechManager.errorMessage.collectAsStateWithLifecycle()
+    val openAIIsLoading by openAIService.isLoading.collectAsStateWithLifecycle()
+    val openAIErrorMessage by openAIService.errorMessage.collectAsStateWithLifecycle()
     
     var selectedJob by remember { mutableStateOf<TimeEntry?>(null) }
     var showingLogoutDialog by remember { mutableStateOf(false) }
@@ -434,7 +452,7 @@ fun MainScreen(
             isGeneratingSummary = isGeneratingSummary,
             onGeneratingSummaryChange = { isGeneratingSummary = it },
             onSave = { notes, summary ->
-                CoroutineScope(Dispatchers.Main).launch {
+                coroutineScope.launch {
                     try {
                         // Update the TimeEntry with notes and summary
                         val updatedEntry = jobNotesEntry?.copy(
@@ -519,7 +537,15 @@ fun MainScreen(
                 jobNotesEntry = null
                 jobNotesText = ""
                 aiSummary = ""
-            }
+            },
+            speechManager = speechManager,
+            openAIService = openAIService,
+            speechRecognizedText = speechRecognizedText,
+            speechIsRecording = speechIsRecording,
+            speechErrorMessage = speechErrorMessage,
+            openAIIsLoading = openAIIsLoading,
+            openAIErrorMessage = openAIErrorMessage,
+            coroutineScope = coroutineScope
         )
     }
     
@@ -1955,19 +1981,16 @@ fun JobNotesDialog(
     isGeneratingSummary: Boolean,
     onGeneratingSummaryChange: (Boolean) -> Unit,
     onSave: (String, String) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    speechManager: SpeechRecognitionManager,
+    openAIService: OpenAIService,
+    speechRecognizedText: String,
+    speechIsRecording: Boolean,
+    speechErrorMessage: String,
+    openAIIsLoading: Boolean,
+    openAIErrorMessage: String,
+    coroutineScope: CoroutineScope
 ) {
-    val context = LocalContext.current
-    val speechManager = remember { SpeechRecognitionManager(context) }
-    val openAIService = remember { OpenAIService() }
-    val pdfGenerator = remember { PDFGenerator(context) }
-    val shareManager = remember { ShareManager(context) }
-    val speechRecognizedText by speechManager.recognizedText.collectAsStateWithLifecycle()
-    val speechIsRecording by speechManager.isRecording.collectAsStateWithLifecycle()
-    val speechErrorMessage by speechManager.errorMessage.collectAsStateWithLifecycle()
-    val openAIIsLoading by openAIService.isLoading.collectAsStateWithLifecycle()
-    val openAIErrorMessage by openAIService.errorMessage.collectAsStateWithLifecycle()
-    
     // Update parent state when speech recording state changes
     LaunchedEffect(speechIsRecording) {
         onRecordingChange(speechIsRecording)
@@ -2064,7 +2087,7 @@ fun JobNotesDialog(
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(
-                                imageVector = if (speechIsRecording) Icons.Default.Stop else Icons.Default.Star,
+                                imageVector = if (speechIsRecording) Icons.Default.Pause else Icons.Default.Mic,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -2076,7 +2099,7 @@ fun JobNotesDialog(
                         OutlinedButton(
                             onClick = {
                                 if (jobNotesText.isNotBlank()) {
-                                    CoroutineScope(Dispatchers.Main).launch {
+                                    coroutineScope.launch {
                                         val result = openAIService.summarizeJobNotes(
                                             notes = jobNotesText,
                                             customerName = entry?.customerName ?: ""
