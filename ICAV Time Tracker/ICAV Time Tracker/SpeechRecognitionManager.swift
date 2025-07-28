@@ -14,8 +14,9 @@ class SpeechRecognitionManager: NSObject, ObservableObject {
     private var recognitionTask: SFSpeechRecognitionTask?
     private let audioEngine = AVAudioEngine()
     
-    init() {
+    override init() {
         speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+        super.init()
         speechRecognizer?.delegate = self
     }
     
