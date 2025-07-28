@@ -1,6 +1,6 @@
-import { sql } from '@vercel/postgres';
+const { sql } = require('@vercel/postgres');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
     console.log('Debug Tables: Starting simple check');
     
@@ -93,4 +93,4 @@ export default async function handler(req, res) {
       timestamp: new Date().toISOString()
     });
   }
-} 
+}; 

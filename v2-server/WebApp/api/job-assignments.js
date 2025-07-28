@@ -1,6 +1,6 @@
-import { sql } from '@vercel/postgres';
+const { sql } = require('@vercel/postgres');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   console.log(`Job Assignments API: ${req.method} ${req.url}`);
   
   // Set CORS headers
@@ -388,4 +388,4 @@ async function handleDeleteAssignment(req, res, user) {
     console.error('Error deleting job assignment:', error);
     return res.status(500).json({ error: 'Failed to delete job assignment' });
   }
-} 
+}; 
