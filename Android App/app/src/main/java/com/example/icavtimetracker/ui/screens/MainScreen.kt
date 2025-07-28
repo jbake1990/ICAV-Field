@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.icavtimetracker.OpenAIService
 import com.example.icavtimetracker.SpeechRecognitionManager
 import com.example.icavtimetracker.data.ClockStatus
 import com.example.icavtimetracker.data.TimeEntry
@@ -28,6 +29,8 @@ import com.example.icavtimetracker.viewmodel.TimeTrackerViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.Calendar
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -343,6 +346,20 @@ fun MainScreen(
             text = { Text(speechErrorMessage) },
             confirmButton = {
                 TextButton(onClick = { speechManager.clearError() }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+    
+    // Show error dialog for OpenAI errors
+    if (openAIErrorMessage.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = { openAIService.clearError() },
+            title = { Text("AI Summary Error") },
+            text = { Text(openAIErrorMessage) },
+            confirmButton = {
+                TextButton(onClick = { openAIService.clearError() }) {
                     Text("OK")
                 }
             }
@@ -1873,13 +1890,21 @@ fun JobNotesDialog(
 ) {
     val context = LocalContext.current
     val speechManager = remember { SpeechRecognitionManager(context) }
+    val openAIService = remember { OpenAIService() }
     val speechRecognizedText by speechManager.recognizedText.collectAsStateWithLifecycle()
     val speechIsRecording by speechManager.isRecording.collectAsStateWithLifecycle()
     val speechErrorMessage by speechManager.errorMessage.collectAsStateWithLifecycle()
+    val openAIIsLoading by openAIService.isLoading.collectAsStateWithLifecycle()
+    val openAIErrorMessage by openAIService.errorMessage.collectAsStateWithLifecycle()
     
     // Update parent state when speech recording state changes
     LaunchedEffect(speechIsRecording) {
         onRecordingChange(speechIsRecording)
+    }
+    
+    // Update parent state when OpenAI loading state changes
+    LaunchedEffect(openAIIsLoading) {
+        onGeneratingSummaryChange(openAIIsLoading)
     }
     
     // Handle recognized text
@@ -1979,32 +2004,30 @@ fun JobNotesDialog(
                         // AI Summarize button
                         OutlinedButton(
                             onClick = {
-                                // TODO: Implement OpenAI summarization
                                 if (jobNotesText.isNotBlank()) {
-                                    onGeneratingSummaryChange(true)
-                                    // Simulate AI summary generation
-                                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                                        onAiSummaryChange("""
-                                            Customer: ${entry?.customerName ?: "Unknown"}
-                                            
-                                            Work Description: ${jobNotesText.take(100)}...
-                                            
-                                            Follow-up Steps:
-                                            • Review completed work
-                                            • Schedule follow-up if needed
-                                            • Update customer on completion status
-                                        """.trimIndent())
-                                        onGeneratingSummaryChange(false)
-                                    }, 2000)
+                                    CoroutineScope(Dispatchers.Main).launch {
+                                        val result = openAIService.summarizeJobNotes(
+                                            notes = jobNotesText,
+                                            customerName = entry?.customerName ?: ""
+                                        )
+                                        result.fold(
+                                            onSuccess = { summary ->
+                                                onAiSummaryChange(summary.fullSummary)
+                                            },
+                                            onFailure = { error ->
+                                                onAiSummaryChange("Failed to generate summary: ${error.message}")
+                                            }
+                                        )
+                                    }
                                 }
                             },
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = Color(0xFF9C27B0)
                             ),
-                            enabled = jobNotesText.isNotBlank() && !isGeneratingSummary,
+                            enabled = jobNotesText.isNotBlank() && !openAIIsLoading,
                             modifier = Modifier.weight(1f)
                         ) {
-                            if (isGeneratingSummary) {
+                            if (openAIIsLoading) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(16.dp),
                                     strokeWidth = 2.dp

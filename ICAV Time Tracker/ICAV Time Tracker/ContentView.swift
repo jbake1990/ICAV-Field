@@ -718,6 +718,7 @@ struct JobNotesModal: View {
     let onCancel: () -> Void
     
     @StateObject private var speechManager = SpeechRecognitionManager()
+    @StateObject private var openAIService = OpenAIService()
     
     var body: some View {
         NavigationView {
@@ -869,28 +870,36 @@ struct JobNotesModal: View {
             } message: {
                 Text(speechManager.errorMessage)
             }
+            .alert("AI Summary Error", isPresented: .constant(!openAIService.errorMessage.isEmpty)) {
+                Button("OK") {
+                    openAIService.clearError()
+                }
+            } message: {
+                Text(openAIService.errorMessage)
+            }
         }
     }
     
     private func generateAISummary() {
         guard !jobNotesText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         
-        isGeneratingSummary = true
-        
-        // TODO: Implement actual OpenAI API call
-        // For now, simulate with a delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            aiSummary = """
-            Customer: \(entry?.customerName ?? "Unknown")
-            
-            Work Description: \(jobNotesText.prefix(100))...
-            
-            Follow-up Steps: 
-            • Review completed work
-            • Schedule follow-up if needed
-            • Update customer on completion status
-            """
-            isGeneratingSummary = false
+        Task {
+            isGeneratingSummary = true
+            do {
+                let summary = try await openAIService.summarizeJobNotes(
+                    jobNotesText,
+                    customerName: jobNotesEntry?.customerName ?? ""
+                )
+                await MainActor.run {
+                    aiSummary = summary.fullSummary
+                    isGeneratingSummary = false
+                }
+            } catch {
+                await MainActor.run {
+                    aiSummary = "Failed to generate summary: \(error.localizedDescription)"
+                    isGeneratingSummary = false
+                }
+            }
         }
     }
 }
