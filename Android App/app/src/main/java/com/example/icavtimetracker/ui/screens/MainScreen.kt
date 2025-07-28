@@ -15,11 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.icavtimetracker.SpeechRecognitionManager
 import com.example.icavtimetracker.data.ClockStatus
 import com.example.icavtimetracker.data.TimeEntry
 import com.example.icavtimetracker.viewmodel.TimeTrackerViewModel
@@ -329,10 +331,24 @@ fun MainScreen(
                         onEdit = { 
                             editingEntry = entry
                             showEditDialog = true
-                        }
-                    )
+                                    }
+        )
+    }
+    
+    // Show error dialog for speech recognition errors
+    if (speechErrorMessage.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = { speechManager.clearError() },
+            title = { Text("Speech Recognition Error") },
+            text = { Text(speechErrorMessage) },
+            confirmButton = {
+                TextButton(onClick = { speechManager.clearError() }) {
+                    Text("OK")
                 }
             }
+        )
+    }
+}
             
             // Error message
             if (error != null) {
@@ -1855,6 +1871,34 @@ fun JobNotesDialog(
     onSave: (String, String) -> Unit,
     onCancel: () -> Unit
 ) {
+    val context = LocalContext.current
+    val speechManager = remember { SpeechRecognitionManager(context) }
+    val speechRecognizedText by speechManager.recognizedText.collectAsStateWithLifecycle()
+    val speechIsRecording by speechManager.isRecording.collectAsStateWithLifecycle()
+    val speechErrorMessage by speechManager.errorMessage.collectAsStateWithLifecycle()
+    
+    // Update parent state when speech recording state changes
+    LaunchedEffect(speechIsRecording) {
+        onRecordingChange(speechIsRecording)
+    }
+    
+    // Handle recognized text
+    LaunchedEffect(speechRecognizedText) {
+        if (speechRecognizedText.isNotEmpty()) {
+            if (jobNotesText.isEmpty()) {
+                onJobNotesTextChange(speechRecognizedText)
+            } else {
+                onJobNotesTextChange("$jobNotesText $speechRecognizedText")
+            }
+        }
+    }
+    
+    // Clean up speech recognizer
+    DisposableEffect(Unit) {
+        onDispose {
+            speechManager.destroy()
+        }
+    }
     Dialog(
         onDismissRequest = onCancel
     ) {
@@ -1911,21 +1955,25 @@ fun JobNotesDialog(
                         // Voice input button
                         OutlinedButton(
                             onClick = {
-                                // TODO: Implement speech-to-text
-                                onRecordingChange(!isRecording)
+                                if (speechIsRecording) {
+                                    speechManager.stopRecording()
+                                } else {
+                                    speechManager.resetText()
+                                    speechManager.startRecording()
+                                }
                             },
                             colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = if (isRecording) Color.Red else Color.Blue
+                                contentColor = if (speechIsRecording) Color.Red else Color.Blue
                             ),
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(
-                                imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Star,
+                                imageVector = if (speechIsRecording) Icons.Default.Stop else Icons.Default.Star,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(if (isRecording) "Stop Recording" else "Voice Input")
+                            Text(if (speechIsRecording) "Stop Recording" else "Voice Input")
                         }
                         
                         // AI Summarize button

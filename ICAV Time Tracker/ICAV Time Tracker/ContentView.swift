@@ -717,6 +717,8 @@ struct JobNotesModal: View {
     let onSave: (String, String) -> Void
     let onCancel: () -> Void
     
+    @StateObject private var speechManager = SpeechRecognitionManager()
+    
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
@@ -751,20 +753,28 @@ struct JobNotesModal: View {
                     // Voice input button
                     HStack {
                         Button(action: {
-                            // TODO: Implement speech-to-text
-                            isRecording.toggle()
+                            Task {
+                                if speechManager.isRecording {
+                                    speechManager.stopRecording()
+                                    isRecording = false
+                                } else {
+                                    speechManager.resetText()
+                                    await speechManager.startRecording()
+                                    isRecording = speechManager.isRecording
+                                }
+                            }
                         }) {
                             HStack(spacing: 8) {
-                                Image(systemName: isRecording ? "mic.fill" : "mic")
-                                    .foregroundColor(isRecording ? .red : .blue)
-                                Text(isRecording ? "Stop Recording" : "Voice Input")
-                                    .foregroundColor(isRecording ? .red : .blue)
+                                Image(systemName: speechManager.isRecording ? "mic.fill" : "mic")
+                                    .foregroundColor(speechManager.isRecording ? .red : .blue)
+                                Text(speechManager.isRecording ? "Stop Recording" : "Voice Input")
+                                    .foregroundColor(speechManager.isRecording ? .red : .blue)
                             }
                             .padding(.vertical, 8)
                             .padding(.horizontal, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(isRecording ? Color.red.opacity(0.1) : Color.blue.opacity(0.1))
+                                    .fill(speechManager.isRecording ? Color.red.opacity(0.1) : Color.blue.opacity(0.1))
                             )
                         }
                         
@@ -834,6 +844,31 @@ struct JobNotesModal: View {
             }
             .padding()
             .navigationBarHidden(true)
+            .onChange(of: speechManager.recognizedText) { newText in
+                if !newText.isEmpty {
+                    // Append recognized text to existing notes
+                    if jobNotesText.isEmpty {
+                        jobNotesText = newText
+                    } else {
+                        jobNotesText += " " + newText
+                    }
+                }
+            }
+            .onChange(of: speechManager.isRecording) { recording in
+                isRecording = recording
+            }
+            .onAppear {
+                Task {
+                    await speechManager.requestPermissions()
+                }
+            }
+            .alert("Speech Recognition Error", isPresented: .constant(!speechManager.errorMessage.isEmpty)) {
+                Button("OK") {
+                    speechManager.errorMessage = ""
+                }
+            } message: {
+                Text(speechManager.errorMessage)
+            }
         }
     }
     
