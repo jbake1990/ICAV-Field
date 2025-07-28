@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Users, Plus, Trash2, Edit, AlertTriangle, X } from 'lucide-react';
+import { Calendar, Clock, Users, Plus, Trash2, Edit, AlertTriangle, X, GripVertical } from 'lucide-react';
 import { Job, JobAssignment, CalendarEvent, User, JobStatus } from '../types';
 
 interface JobCalendarProps {
@@ -30,6 +30,8 @@ export default function JobCalendar({
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [draggedJob, setDraggedJob] = useState<DraggedJob | null>(null);
   const [showCreateJob, setShowCreateJob] = useState(false);
+  const [technicianOrder, setTechnicianOrder] = useState<string[]>([]);
+  const [draggedTechnician, setDraggedTechnician] = useState<string | null>(null);
   const [newJob, setNewJob] = useState<{
     title: string;
     customerName: string;
@@ -88,13 +90,63 @@ export default function JobCalendar({
   });
   
   // If no technicians found, create some demo ones for testing
-  const displayTechnicians = technicians.length > 0 ? technicians : [
+  const baseTechnicians = technicians.length > 0 ? technicians : [
     { id: 'demo1', displayName: 'John Doe', role: 'tech' as const, isActive: true, username: 'john.doe', email: 'john@icav.com' },
     { id: 'demo2', displayName: 'Jane Smith', role: 'tech' as const, isActive: true, username: 'jane.smith', email: 'jane@icav.com' },
     { id: 'demo3', displayName: 'Mike Johnson', role: 'tech' as const, isActive: true, username: 'mike.johnson', email: 'mike@icav.com' },
     { id: 'demo4', displayName: 'Sarah Wilson', role: 'tech' as const, isActive: true, username: 'sarah.wilson', email: 'sarah@icav.com' },
     { id: 'demo5', displayName: 'David Brown', role: 'tech' as const, isActive: true, username: 'david.brown', email: 'david@icav.com' }
   ] as typeof users;
+
+  // Initialize technician order if not set (load from localStorage or default)
+  React.useEffect(() => {
+    if (baseTechnicians.length > 0 && technicianOrder.length === 0) {
+      const savedOrder = localStorage.getItem('icav-technician-order');
+      if (savedOrder) {
+        try {
+          const parsedOrder = JSON.parse(savedOrder);
+          // Validate that saved order contains valid technician IDs
+          const validOrder = parsedOrder.filter((id: string) => 
+            baseTechnicians.some(t => t.id === id)
+          );
+          if (validOrder.length > 0) {
+            setTechnicianOrder(validOrder);
+            return;
+          }
+        } catch (error) {
+          console.warn('Failed to parse saved technician order:', error);
+        }
+      }
+      // Default to current order
+      setTechnicianOrder(baseTechnicians.map(t => t.id));
+    }
+  }, [baseTechnicians, technicianOrder.length]);
+
+  // Save technician order to localStorage when it changes
+  React.useEffect(() => {
+    if (technicianOrder.length > 0) {
+      localStorage.setItem('icav-technician-order', JSON.stringify(technicianOrder));
+    }
+  }, [technicianOrder]);
+
+  // Apply custom order to technicians
+  const displayTechnicians = React.useMemo(() => {
+    if (technicianOrder.length === 0) return baseTechnicians;
+    
+    const orderedTechnicians = [];
+    // Add technicians in the specified order
+    for (const techId of technicianOrder) {
+      const tech = baseTechnicians.find(t => t.id === techId);
+      if (tech) orderedTechnicians.push(tech);
+    }
+    // Add any new technicians not in the order list
+    for (const tech of baseTechnicians) {
+      if (!technicianOrder.includes(tech.id)) {
+        orderedTechnicians.push(tech);
+      }
+    }
+    return orderedTechnicians;
+  }, [baseTechnicians, technicianOrder]);
   
   console.log('JobCalendar - Final technicians:', displayTechnicians.length);
 
@@ -119,10 +171,46 @@ export default function JobCalendar({
     );
   };
 
-  // Handle drag start
+  // Handle drag start for jobs
   const handleDragStart = (e: React.DragEvent, job: Job, sourceType: 'unassigned' | 'calendar', assignmentId?: string) => {
     setDraggedJob({ job, sourceType, sourceAssignmentId: assignmentId });
     e.dataTransfer.effectAllowed = 'move';
+  };
+
+  // Handle technician drag start
+  const handleTechnicianDragStart = (e: React.DragEvent, technicianId: string) => {
+    setDraggedTechnician(technicianId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', technicianId);
+  };
+
+  // Handle technician drag over
+  const handleTechnicianDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  // Handle technician drop
+  const handleTechnicianDrop = (e: React.DragEvent, targetTechnicianId: string) => {
+    e.preventDefault();
+    
+    if (!draggedTechnician || draggedTechnician === targetTechnicianId) {
+      setDraggedTechnician(null);
+      return;
+    }
+
+    const newOrder = [...technicianOrder];
+    const draggedIndex = newOrder.indexOf(draggedTechnician);
+    const targetIndex = newOrder.indexOf(targetTechnicianId);
+
+    if (draggedIndex !== -1 && targetIndex !== -1) {
+      // Remove dragged item and insert at target position
+      newOrder.splice(draggedIndex, 1);
+      newOrder.splice(targetIndex, 0, draggedTechnician);
+      setTechnicianOrder(newOrder);
+    }
+
+    setDraggedTechnician(null);
   };
 
   // Handle drop
@@ -281,7 +369,25 @@ export default function JobCalendar({
         <div className="flex-1 bg-white rounded-lg border border-gray-200">
           <div className="grid grid-cols-6 border-b border-gray-200">
             {/* Header row */}
-            <div className="p-4 bg-gray-50 font-semibold">Technician</div>
+            <div className="p-4 bg-gray-50 font-semibold">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <span>Technician</span>
+                  <span className="ml-2 text-xs text-gray-500 font-normal">(drag to reorder)</span>
+                </div>
+                <button
+                  onClick={() => {
+                    const alphabeticalOrder = [...baseTechnicians]
+                      .sort((a, b) => a.displayName.localeCompare(b.displayName))
+                      .map(t => t.id);
+                    setTechnicianOrder(alphabeticalOrder);
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-800 underline"
+                >
+                  Alphabetize
+                </button>
+              </div>
+            </div>
             {weekdays.map(day => (
               <div key={day.toISOString()} className="p-4 bg-gray-50 font-semibold text-center">
                 {formatDate(day)}
@@ -291,10 +397,22 @@ export default function JobCalendar({
 
           {/* Technician rows */}
           {displayTechnicians.map(technician => (
-            <div key={technician.id} className="grid grid-cols-6 border-b border-gray-200 min-h-[120px]">
-              {/* Technician name */}
-              <div className="p-4 bg-gray-50 border-r border-gray-200 font-medium">
-                {technician.displayName}
+            <div 
+              key={technician.id} 
+              className={`grid grid-cols-6 border-b border-gray-200 min-h-[120px] transition-all duration-200 ${
+                draggedTechnician === technician.id ? 'opacity-50 bg-blue-50' : 'hover:bg-gray-50'
+              }`}
+              draggable
+              onDragStart={(e) => handleTechnicianDragStart(e, technician.id)}
+              onDragOver={handleTechnicianDragOver}
+              onDrop={(e) => handleTechnicianDrop(e, technician.id)}
+            >
+              {/* Technician name with drag handle */}
+              <div className="p-4 bg-gray-50 border-r border-gray-200 font-medium flex items-center group">
+                <GripVertical 
+                  className="w-4 h-4 text-gray-400 mr-3 cursor-grab group-hover:text-gray-600 transition-colors" 
+                />
+                <span className="select-none">{technician.displayName}</span>
               </div>
 
               {/* Days */}
