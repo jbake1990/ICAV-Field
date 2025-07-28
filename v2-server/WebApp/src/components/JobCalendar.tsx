@@ -32,6 +32,14 @@ export default function JobCalendar({
   const [showCreateJob, setShowCreateJob] = useState(false);
   const [technicianOrder, setTechnicianOrder] = useState<string[]>([]);
   const [draggedTechnician, setDraggedTechnician] = useState<string | null>(null);
+  const [showCustomHoursModal, setShowCustomHoursModal] = useState(false);
+  const [customAssignment, setCustomAssignment] = useState<{
+    job: Job;
+    technicianId: string;
+    date: Date;
+    timeSlot: string;
+    hours: number;
+  } | null>(null);
   const [newJob, setNewJob] = useState<{
     title: string;
     customerName: string;
@@ -58,12 +66,12 @@ export default function JobCalendar({
     return new Date(d.setDate(diff));
   };
 
-  // Get weekdays (Monday to Friday)
+  // Get weekdays (Monday to Friday) - Fix timezone issues
   const getWeekdays = (startDate: Date) => {
     const days = [];
     for (let i = 0; i < 5; i++) {
-      const day = new Date(startDate);
-      day.setDate(startDate.getDate() + i);
+      // Create date at noon to avoid timezone issues
+      const day = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i, 12, 0, 0);
       days.push(day);
     }
     return days;
@@ -72,11 +80,12 @@ export default function JobCalendar({
   const weekStart = getWeekStart(currentWeek);
   const weekdays = getWeekdays(weekStart);
   
-  // Define time slots
+  // Define time slots - 4x 2-hour slots
   const timeSlots = [
-    { id: 'morning', label: 'Morning', time: '8:00 AM - 12:00 PM' },
-    { id: 'afternoon', label: 'Afternoon', time: '12:00 PM - 5:00 PM' },
-    { id: 'evening', label: 'Evening', time: '5:00 PM - 8:00 PM' }
+    { id: 'morning', label: 'Morning', time: '8:00 AM - 10:00 AM', hours: 2 },
+    { id: 'late-morning', label: 'Late Morning', time: '10:00 AM - 12:00 PM', hours: 2 },
+    { id: 'early-afternoon', label: 'Early Afternoon', time: '12:00 PM - 2:00 PM', hours: 2 },
+    { id: 'late-afternoon', label: 'Late Afternoon', time: '2:00 PM - 4:00 PM', hours: 2 }
   ];
   
   // Debug logging
@@ -157,12 +166,19 @@ export default function JobCalendar({
   
   console.log('JobCalendar - Final technicians:', displayTechnicians.length);
 
-  // Get unassigned jobs - only jobs that truly have no assignments
+  // Calculate remaining hours for a job
+  const getJobRemainingHours = (job: Job) => {
+    const jobAssignments = assignments.filter(a => a.jobId === job.id);
+    const assignedHours = jobAssignments.reduce((total, assignment) => total + assignment.assignedHours, 0);
+    const remainingHours = Math.max(0, job.estimatedHours - assignedHours);
+    console.log(`Job "${job.title}": estimated=${job.estimatedHours}, assigned=${assignedHours}, remaining=${remainingHours}`);
+    return remainingHours;
+  };
+
+  // Get jobs with remaining hours (partially or fully unassigned)
   const unassignedJobs = jobs.filter(job => {
-    const hasAssignments = assignments.some(a => a.jobId === job.id);
-    const isUnassigned = !hasAssignments || job.status === 'draft';
-    console.log(`Job "${job.title}": status=${job.status}, hasAssignments=${hasAssignments}, isUnassigned=${isUnassigned}`);
-    return isUnassigned;
+    const remainingHours = getJobRemainingHours(job);
+    return remainingHours > 0;
   });
 
   // Get assignments for the current week
@@ -260,46 +276,77 @@ export default function JobCalendar({
 
     const { job, sourceType, sourceAssignmentId } = draggedJob;
     
+    // Check if it's a time slot drop (2 hours) or if we need custom hours
+    const slot = timeSlots.find(s => s.id === timeSlot);
+    const isTimeSlotDrop = !!slot;
+    const remainingHours = getJobRemainingHours(job);
+    
     // Debug logging
     console.log('Drop event:', {
       jobTitle: job.title,
       technicianId,
-      date: date.toISOString(),
-      dateString: date.toDateString(),
+      date: date.toDateString(),
       timeSlot,
+      isTimeSlotDrop,
+      remainingHours,
       sourceType,
       sourceAssignmentId
     });
 
-    try {
-      if (sourceType === 'unassigned') {
-        // Create assignment with time slot info
-        const technicianName = displayTechnicians.find(t => t.id === technicianId)?.displayName || '';
-        const timeSlotNote = timeSlot ? `timeSlot:${timeSlot};` : 'timeSlot:morning;';
-        
-        // For now, we'll use the existing onAssignJob function and update the assignment afterward
-        await onAssignJob(job.id, technicianId, date, job.estimatedHours);
-        
-        // TODO: We should ideally modify the assignment creation to include time slot
-        console.log('Job assigned with time slot:', timeSlot || 'morning');
-        
-      } else if (sourceType === 'calendar' && sourceAssignmentId) {
-        // Move existing assignment to new tech/date/time slot
-        const technicianName = displayTechnicians.find(t => t.id === technicianId)?.displayName || '';
-        const timeSlotNote = timeSlot ? `timeSlot:${timeSlot};` : 'timeSlot:morning;';
-        
-        await onUpdateAssignment(sourceAssignmentId, {
-          userId: technicianId,
-          assignedDate: date,
-          technicianName,
-          notes: timeSlotNote
+    if (sourceType === 'unassigned') {
+      if (isTimeSlotDrop && remainingHours >= 2) {
+        // Standard 2-hour time slot assignment
+        await handleTimeSlotAssignment(job, technicianId, date, timeSlot!, 2);
+      } else {
+        // Show custom hours modal
+        setCustomAssignment({
+          job,
+          technicianId,
+          date,
+          timeSlot: timeSlot || 'morning',
+          hours: Math.min(remainingHours, 2)
         });
+        setShowCustomHoursModal(true);
       }
-    } catch (error) {
-      console.error('Failed to assign job:', error);
+    } else if (sourceType === 'calendar' && sourceAssignmentId) {
+      // Move existing assignment to new tech/date/time slot
+      const technicianName = displayTechnicians.find(t => t.id === technicianId)?.displayName || '';
+      const timeSlotNote = timeSlot ? `timeSlot:${timeSlot};` : 'timeSlot:morning;';
+      
+      await onUpdateAssignment(sourceAssignmentId, {
+        userId: technicianId,
+        assignedDate: date,
+        technicianName,
+        notes: timeSlotNote
+      });
     }
 
     setDraggedJob(null);
+  };
+
+  // Handle time slot assignment
+  const handleTimeSlotAssignment = async (job: Job, technicianId: string, date: Date, timeSlot: string, hours: number) => {
+    const technicianName = displayTechnicians.find(t => t.id === technicianId)?.displayName || '';
+    const timeSlotNote = `timeSlot:${timeSlot};`;
+    
+    try {
+      // Create partial assignment
+      await onAssignJob(job.id, technicianId, date, hours);
+      console.log(`Assigned ${hours} hours of "${job.title}" to ${technicianName} on ${date.toDateString()} (${timeSlot})`);
+    } catch (error) {
+      console.error('Failed to assign job to time slot:', error);
+    }
+  };
+
+  // Handle custom hours assignment
+  const handleCustomHoursAssignment = async () => {
+    if (!customAssignment) return;
+    
+    const { job, technicianId, date, timeSlot, hours } = customAssignment;
+    await handleTimeSlotAssignment(job, technicianId, date, timeSlot, hours);
+    
+    setShowCustomHoursModal(false);
+    setCustomAssignment(null);
   };
 
   // Handle drag over for jobs
@@ -400,29 +447,39 @@ export default function JobCalendar({
       <div className="flex-1 flex space-x-6">
         {/* Unassigned Jobs Panel */}
         <div className="w-64 bg-gray-50 rounded-lg p-4">
-          <h3 className="text-lg font-semibold mb-4">Unassigned Jobs</h3>
+          <h3 className="text-lg font-semibold mb-4">Jobs ({unassignedJobs.length})</h3>
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {unassignedJobs.map(job => (
-              <div
-                key={job.id}
-                draggable
-                onDragStart={(e) => handleDragStart(e, job, 'unassigned')}
-                className="p-3 bg-white border border-gray-200 rounded-lg cursor-move hover:shadow-md transition-shadow"
-              >
-                <div className="font-medium text-sm">{job.title}</div>
-                <div className="text-xs text-gray-600">{job.customerName}</div>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-xs text-gray-500">{job.estimatedHours}h</span>
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    job.priority === 'high' ? 'bg-red-100 text-red-700' :
-                    job.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-green-100 text-green-700'
-                  }`}>
-                    {job.priority}
-                  </span>
-                </div>
-              </div>
-            ))}
+            {unassignedJobs.map(job => {
+              const remainingHours = getJobRemainingHours(job);
+              const assignedHours = job.estimatedHours - remainingHours;
+              
+              return (
+                  <div
+                    key={job.id}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, job, 'unassigned')}
+                    className="p-3 bg-white border border-gray-200 rounded-lg cursor-move hover:shadow-md transition-shadow"
+                  >
+                    <div className="font-medium text-sm">{job.title}</div>
+                    <div className="text-xs text-gray-600">{job.customerName}</div>
+                    <div className="flex items-center justify-between mt-2">
+                      <div className="text-xs">
+                        <span className="text-blue-600 font-medium">{remainingHours}h remaining</span>
+                        {assignedHours > 0 && (
+                          <span className="text-gray-500 ml-1">({assignedHours}h assigned)</span>
+                        )}
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded ${
+                        job.priority === 'high' ? 'bg-red-100 text-red-700' :
+                        job.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-green-100 text-green-700'
+                      }`}>
+                        {job.priority}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             {unassignedJobs.length === 0 && (
               <div className="text-sm text-gray-500 text-center py-4">
                 No unassigned jobs
@@ -457,7 +514,7 @@ export default function JobCalendar({
             {weekdays.map(day => (
               <div key={day.toISOString()} className="p-2 bg-gray-50 font-semibold text-center">
                 <div className="text-sm">{formatDate(day)}</div>
-                <div className="grid grid-rows-3 gap-1 mt-2">
+                <div className="grid grid-rows-4 gap-1 mt-2">
                   {timeSlots.map(slot => (
                     <div key={slot.id} className="text-xs text-gray-600 py-1 px-1 bg-white rounded border">
                       {slot.label}
@@ -472,7 +529,7 @@ export default function JobCalendar({
           {displayTechnicians.map(technician => (
             <div 
               key={technician.id} 
-              className={`grid grid-cols-6 border-b border-gray-200 min-h-[240px] transition-all duration-200 ${
+              className={`grid grid-cols-6 border-b border-gray-200 min-h-[320px] transition-all duration-200 ${
                 draggedTechnician === technician.id ? 'opacity-50 bg-blue-50' : ''
               }`}
             >
@@ -512,14 +569,14 @@ export default function JobCalendar({
                     )}
 
                     {/* Time slots */}
-                    <div className="grid grid-rows-3">
+                    <div className="grid grid-rows-4">
                       {timeSlots.map(slot => {
                         const slotAssignments = getAssignmentsForDay(technician.id, day, slot.id);
                         
                         return (
                           <div
                             key={`${technician.id}-${day.toISOString()}-${slot.id}`}
-                            className="p-2 border-b border-gray-100 min-h-[80px] hover:bg-gray-50"
+                            className="p-2 border-b border-gray-100 min-h-[70px] hover:bg-gray-50"
                             onDrop={(e) => handleDrop(e, technician.id, day, slot.id)}
                             onDragOver={handleDragOver}
                           >
@@ -554,17 +611,20 @@ export default function JobCalendar({
                                 );
                               })}
                               
-                              {/* Show all assignments if no time slot filtering for now */}
-                              {slotAssignments.length === 0 && slot.id === 'morning' && dayAssignments.map(assignment => {
+                              {/* Show legacy assignments without time slot info in morning slot */}
+                              {slot.id === 'morning' && dayAssignments.filter(a => 
+                                !a.notes || !a.notes.includes('timeSlot:')
+                              ).map(assignment => {
                                 const job = jobs.find(j => j.id === assignment.jobId);
                                 if (!job) return null;
 
                                 return (
                                   <div
-                                    key={assignment.id}
+                                    key={`legacy-${assignment.id}`}
                                     draggable
                                     onDragStart={(e) => handleDragStart(e, job, 'calendar', assignment.id)}
-                                    className="p-1 bg-blue-100 border border-blue-200 rounded text-xs cursor-move hover:bg-blue-200 transition-colors"
+                                    className="p-1 bg-yellow-100 border border-yellow-200 rounded text-xs cursor-move hover:bg-yellow-200 transition-colors"
+                                    title="Legacy assignment - no time slot specified"
                                   >
                                     <div className="font-medium truncate">{job.title}</div>
                                     <div className="text-gray-600 truncate">{job.customerName}</div>
@@ -593,6 +653,67 @@ export default function JobCalendar({
           ))}
         </div>
       </div>
+
+      {/* Custom Hours Modal */}
+      {showCustomHoursModal && customAssignment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-96 max-w-90vw">
+            <h3 className="text-lg font-semibold mb-4">Assign Custom Hours</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <strong>Job:</strong> {customAssignment.job.title}
+              </div>
+              <div>
+                <strong>Technician:</strong> {displayTechnicians.find(t => t.id === customAssignment.technicianId)?.displayName}
+              </div>
+              <div>
+                <strong>Date:</strong> {customAssignment.date.toDateString()}
+              </div>
+              <div>
+                <strong>Time Slot:</strong> {timeSlots.find(s => s.id === customAssignment.timeSlot)?.label}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Hours to Assign (Remaining: {getJobRemainingHours(customAssignment.job)}h)
+                </label>
+                <input
+                  type="number"
+                  min="0.5"
+                  max={getJobRemainingHours(customAssignment.job)}
+                  step="0.5"
+                  value={customAssignment.hours}
+                  onChange={(e) => setCustomAssignment({
+                    ...customAssignment,
+                    hours: parseFloat(e.target.value) || 0
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowCustomHoursModal(false);
+                  setCustomAssignment(null);
+                }}
+                className="flex-1 px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCustomHoursAssignment}
+                disabled={!customAssignment.hours || customAssignment.hours <= 0}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Assign {customAssignment.hours}h
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Job Modal */}
       {showCreateJob && (
