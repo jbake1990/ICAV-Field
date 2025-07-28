@@ -31,7 +31,7 @@ class SpeechRecognitionManager: NSObject, ObservableObject {
         // Request microphone permission
         let microphoneAuth = await withCheckedContinuation { continuation in
             if #available(iOS 17.0, *) {
-                AVAudioApplication.shared.requestRecordPermission { granted in
+                AVAudioApplication.requestRecordPermission { granted in
                     continuation.resume(returning: granted)
                 }
             } else {
