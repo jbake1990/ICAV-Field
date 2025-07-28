@@ -1033,7 +1033,7 @@ class TimeTrackerViewModel(application: Application) : AndroidViewModel(applicat
                 // Delete from server if it has a server ID
                 if (entry.serverId != null) {
                     Log.d("TimeTrackerViewModel", "Attempting to delete from server with serverId: ${entry.serverId}")
-                    Log.d("TimeTrackerViewModel", "Full delete URL will be: https://icav-time-server.vercel.app/api/time-entries/${entry.serverId}")
+                    Log.d("TimeTrackerViewModel", "Full delete URL will be: https://icav-feild.vercel.app/api/time-entries/${entry.serverId}")
                     repository.deleteTimeEntry(entry).fold(
                         onSuccess = { success ->
                             Log.d("TimeTrackerViewModel", "Entry deleted from server successfully")
