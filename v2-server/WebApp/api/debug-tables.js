@@ -1,101 +1,95 @@
 import { sql } from '@vercel/postgres';
 
 export default async function handler(req, res) {
-  console.log('Debug Tables: Checking database structure');
-  
   try {
-    // Check if jobs table exists
-    console.log('Checking if jobs table exists...');
-    const jobsTableCheck = await sql`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      AND table_name = 'jobs'
-    `;
+    console.log('Debug Tables: Starting simple check');
     
-    // Check if job_assignments table exists
-    console.log('Checking if job_assignments table exists...');
-    const assignmentsTableCheck = await sql`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      AND table_name = 'job_assignments'
-    `;
+    // Step 1: Test basic connection
+    const basicTest = await sql`SELECT NOW() as current_time`;
+    console.log('✅ Database connection works');
     
-    // List all tables
-    console.log('Listing all tables...');
+    // Step 2: List all tables
     const allTables = await sql`
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_schema = 'public'
       ORDER BY table_name
     `;
+    console.log('✅ Got table list:', allTables.rows.length, 'tables');
     
-    // Check if job_status enum exists
-    console.log('Checking if job_status enum exists...');
-    const jobStatusEnum = await sql`
-      SELECT typname 
-      FROM pg_type 
-      WHERE typname = 'job_status'
-    `;
+    // Step 3: Check specific tables
+    const tableNames = allTables.rows.map(row => row.table_name);
+    const hasJobs = tableNames.includes('jobs');
+    const hasJobAssignments = tableNames.includes('job_assignments');
+    const hasUsers = tableNames.includes('users');
     
-    // Try a simple jobs query to see the exact error
-    let jobsQueryError = null;
-    try {
-      console.log('Testing jobs query...');
-      await sql`SELECT COUNT(*) FROM jobs`;
-    } catch (error) {
-      jobsQueryError = {
-        message: error.message,
-        code: error.code,
-        detail: error.detail,
-        hint: error.hint
-      };
-      console.error('Jobs query error:', jobsQueryError);
+    console.log('Table check:', { hasJobs, hasJobAssignments, hasUsers });
+    
+    // Step 4: If jobs table exists, try to query it
+    let jobsCount = null;
+    let jobsError = null;
+    if (hasJobs) {
+      try {
+        const result = await sql`SELECT COUNT(*) as count FROM jobs`;
+        jobsCount = result.rows[0].count;
+        console.log('✅ Jobs table has', jobsCount, 'records');
+      } catch (error) {
+        jobsError = error.message;
+        console.log('❌ Jobs table query failed:', error.message);
+      }
     }
     
-    // Try a simple job_assignments query to see the exact error
-    let assignmentsQueryError = null;
-    try {
-      console.log('Testing job_assignments query...');
-      await sql`SELECT COUNT(*) FROM job_assignments`;
-    } catch (error) {
-      assignmentsQueryError = {
-        message: error.message,
-        code: error.code,
-        detail: error.detail,
-        hint: error.hint
-      };
-      console.error('Job assignments query error:', assignmentsQueryError);
+    // Step 5: If job_assignments table exists, try to query it
+    let assignmentsCount = null;
+    let assignmentsError = null;
+    if (hasJobAssignments) {
+      try {
+        const result = await sql`SELECT COUNT(*) as count FROM job_assignments`;
+        assignmentsCount = result.rows[0].count;
+        console.log('✅ Job assignments table has', assignmentsCount, 'records');
+      } catch (error) {
+        assignmentsError = error.message;
+        console.log('❌ Job assignments table query failed:', error.message);
+      }
     }
     
     const result = {
-      tablesFound: {
-        jobs: jobsTableCheck.rows.length > 0,
-        job_assignments: assignmentsTableCheck.rows.length > 0
+      status: 'success',
+      timestamp: new Date().toISOString(),
+      database: {
+        connected: true,
+        currentTime: basicTest.rows[0].current_time
       },
-      allTables: allTables.rows.map(row => row.table_name),
-      enumsFound: {
-        job_status: jobStatusEnum.rows.length > 0
+      tables: {
+        total: allTables.rows.length,
+        list: tableNames,
+        required: {
+          users: hasUsers,
+          jobs: hasJobs,
+          job_assignments: hasJobAssignments
+        }
       },
-      queryErrors: {
-        jobs: jobsQueryError,
-        job_assignments: assignmentsQueryError
-      },
-      timestamp: new Date().toISOString()
+      data: {
+        jobs: { count: jobsCount, error: jobsError },
+        assignments: { count: assignmentsCount, error: assignmentsError }
+      }
     };
     
-    console.log('Debug result:', JSON.stringify(result, null, 2));
+    console.log('Debug result summary:', {
+      tablesFound: tableNames.length,
+      hasJobsTables: hasJobs && hasJobAssignments,
+      errors: { jobs: !!jobsError, assignments: !!assignmentsError }
+    });
     
     return res.status(200).json(result);
     
   } catch (error) {
-    console.error('Debug Tables error:', error);
+    console.error('Debug Tables - Critical error:', error);
     return res.status(500).json({ 
-      error: 'Debug failed',
-      message: error.message,
+      status: 'error',
+      error: error.message,
       code: error.code,
-      detail: error.detail,
+      detail: error.detail || 'No additional details',
       timestamp: new Date().toISOString()
     });
   }
