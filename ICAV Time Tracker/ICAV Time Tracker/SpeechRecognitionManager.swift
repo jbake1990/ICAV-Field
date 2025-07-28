@@ -3,7 +3,7 @@ import Speech
 import AVFoundation
 
 @MainActor
-class SpeechRecognitionManager: ObservableObject {
+class SpeechRecognitionManager: NSObject, ObservableObject {
     @Published var isRecording = false
     @Published var recognizedText = ""
     @Published var isAuthorized = false
@@ -130,7 +130,7 @@ class SpeechRecognitionManager: ObservableObject {
 }
 
 extension SpeechRecognitionManager: SFSpeechRecognizerDelegate {
-    func speechRecognizer(_ speechRecognizer: SFSpeechRecognizer, availabilityDidChange available: Bool) {
+    nonisolated func speechRecognizer(_ speechRecognizer: SFSpeechRecognizer, availabilityDidChange available: Bool) {
         Task { @MainActor in
             if !available {
                 errorMessage = "Speech recognition not available"
