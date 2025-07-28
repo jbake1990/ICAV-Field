@@ -21,6 +21,14 @@ struct ContentView: View {
     @State private var editJob: TimeEntry? = nil
     @State private var showingLogoutAlert = false
     
+    // Job Notes Modal states
+    @State private var showingJobNotesModal = false
+    @State private var jobNotesText = ""
+    @State private var jobNotesEntry: TimeEntry? = nil
+    @State private var isRecording = false
+    @State private var isGeneratingSummary = false
+    @State private var aiSummary = ""
+    
     // Computed property for jobs list (today's entries, most recent first)
     private var jobs: [TimeEntry] {
         viewModel.todayTimeEntries.sorted {
@@ -273,6 +281,24 @@ struct ContentView: View {
             } message: {
                 Text(viewModel.alertMessage)
             }
+            .sheet(isPresented: $showingJobNotesModal) {
+                JobNotesModal(
+                    entry: jobNotesEntry,
+                    jobNotesText: $jobNotesText,
+                    aiSummary: $aiSummary,
+                    isRecording: $isRecording,
+                    isGeneratingSummary: $isGeneratingSummary,
+                    onSave: { notes, summary in
+                        handleJobNotesComplete(notes: notes, summary: summary)
+                    },
+                    onCancel: {
+                        showingJobNotesModal = false
+                        jobNotesEntry = nil
+                        jobNotesText = ""
+                        aiSummary = ""
+                    }
+                )
+            }
             .padding(.horizontal)
             .padding(.bottom, 8)
 
@@ -322,7 +348,15 @@ struct ContentView: View {
                 viewModel.clockIn()
             }
         case "Clock Out":
-            viewModel.clockOut()
+            // Show job notes modal instead of immediately clocking out
+            if case .clockedIn(let activeEntry) = viewModel.currentStatus {
+                jobNotesEntry = activeEntry
+                jobNotesText = ""
+                aiSummary = ""
+                showingJobNotesModal = true
+            } else {
+                viewModel.showAlert("No active time entry to clock out")
+            }
         case "Start Break":
             viewModel.startLunch() // Reuse startLunch for break functionality
         case "End Break":
@@ -625,6 +659,25 @@ struct ContentView: View {
         formatter.timeStyle = .short
         return formatter.string(from: date)
     }
+    
+    private func handleJobNotesComplete(notes: String, summary: String) {
+        guard let entry = jobNotesEntry else { return }
+        
+        // TODO: Save notes and summary to the time entry
+        // TODO: Share functionality
+        // TODO: Send to server
+        
+        // For now, actually clock out
+        viewModel.clockOut()
+        
+        // Close modal
+        showingJobNotesModal = false
+        jobNotesEntry = nil
+        jobNotesText = ""
+        aiSummary = ""
+        
+        print("📝 Job notes saved - Notes: \(notes), Summary: \(summary)")
+    }
 }
 
 extension ClockStatus {
@@ -651,6 +704,158 @@ extension ClockStatus {
             return true
         case .driving:
             return false
+        }
+    }
+}
+
+struct JobNotesModal: View {
+    let entry: TimeEntry?
+    @Binding var jobNotesText: String
+    @Binding var aiSummary: String
+    @Binding var isRecording: Bool
+    @Binding var isGeneratingSummary: Bool
+    let onSave: (String, String) -> Void
+    let onCancel: () -> Void
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 20) {
+                // Header
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Job Notes")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
+                    if let entry = entry {
+                        Text("Customer: \(entry.customerName)")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                // Notes input section
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Job Notes")
+                        .font(.headline)
+                    
+                    // Text input
+                    TextEditor(text: $jobNotesText)
+                        .frame(minHeight: 120)
+                        .padding(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                        )
+                    
+                    // Voice input button
+                    HStack {
+                        Button(action: {
+                            // TODO: Implement speech-to-text
+                            isRecording.toggle()
+                        }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: isRecording ? "mic.fill" : "mic")
+                                    .foregroundColor(isRecording ? .red : .blue)
+                                Text(isRecording ? "Stop Recording" : "Voice Input")
+                                    .foregroundColor(isRecording ? .red : .blue)
+                            }
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(isRecording ? Color.red.opacity(0.1) : Color.blue.opacity(0.1))
+                            )
+                        }
+                        
+                        Spacer()
+                        
+                        // AI Summarize button
+                        Button(action: {
+                            // TODO: Implement OpenAI summarization
+                            generateAISummary()
+                        }) {
+                            HStack(spacing: 8) {
+                                if isGeneratingSummary {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                } else {
+                                    Image(systemName: "sparkles")
+                                }
+                                Text("Summarize")
+                            }
+                            .foregroundColor(.purple)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.purple.opacity(0.1))
+                            )
+                        }
+                        .disabled(jobNotesText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isGeneratingSummary)
+                    }
+                }
+                
+                // AI Summary section
+                if !aiSummary.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("AI Summary")
+                            .font(.headline)
+                        
+                        Text(aiSummary)
+                            .padding(12)
+                            .background(Color.green.opacity(0.1))
+                            .cornerRadius(8)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                
+                Spacer()
+                
+                // Action buttons
+                HStack(spacing: 16) {
+                    Button("Cancel") {
+                        onCancel()
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.gray.opacity(0.2))
+                    .cornerRadius(8)
+                    
+                    Button("Save & Clock Out") {
+                        onSave(jobNotesText, aiSummary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+                }
+            }
+            .padding()
+            .navigationBarHidden(true)
+        }
+    }
+    
+    private func generateAISummary() {
+        guard !jobNotesText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        
+        isGeneratingSummary = true
+        
+        // TODO: Implement actual OpenAI API call
+        // For now, simulate with a delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            aiSummary = """
+            Customer: \(entry?.customerName ?? "Unknown")
+            
+            Work Description: \(jobNotesText.prefix(100))...
+            
+            Follow-up Steps: 
+            • Review completed work
+            • Schedule follow-up if needed
+            • Update customer on completion status
+            """
+            isGeneratingSummary = false
         }
     }
 }

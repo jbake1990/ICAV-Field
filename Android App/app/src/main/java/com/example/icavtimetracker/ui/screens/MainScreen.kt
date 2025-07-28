@@ -47,6 +47,14 @@ fun MainScreen(
     var showEditDialog by remember { mutableStateOf(false) }
     var editingEntry by remember { mutableStateOf<TimeEntry?>(null) }
     
+    // Job Notes Modal states
+    var showJobNotesDialog by remember { mutableStateOf(false) }
+    var jobNotesText by remember { mutableStateOf("") }
+    var jobNotesEntry by remember { mutableStateOf<TimeEntry?>(null) }
+    var isRecording by remember { mutableStateOf(false) }
+    var isGeneratingSummary by remember { mutableStateOf(false) }
+    var aiSummary by remember { mutableStateOf("") }
+    
     // Use derivedStateOf for expensive computations to prevent unnecessary recompositions
     val todayEntries by remember(timeEntries) {
         derivedStateOf {
@@ -240,7 +248,17 @@ fun MainScreen(
                             viewModel.clockIn(selectedJob!!.customerName)
                         }
                     },
-                    onClockOut = { viewModel.clockOut() },
+                    onClockOut = { 
+                        // Show job notes modal instead of immediately clocking out
+                        if (clockStatus == ClockStatus.CLOCKED_IN && currentEntry != null) {
+                            jobNotesEntry = currentEntry
+                            jobNotesText = ""
+                            aiSummary = ""
+                            showJobNotesDialog = true
+                        } else {
+                            viewModel.clockOut()
+                        }
+                    },
                     onStartLunch = { viewModel.startLunch() },
                     onEndLunch = { viewModel.endLunch() },
                     onStartDriving = {
@@ -362,6 +380,43 @@ fun MainScreen(
                 TextButton(onClick = { showingLogoutDialog = false }) {
                     Text("Cancel")
                 }
+            }
+        )
+    }
+
+    // Job Notes Dialog
+    if (showJobNotesDialog) {
+        JobNotesDialog(
+            entry = jobNotesEntry,
+            jobNotesText = jobNotesText,
+            onJobNotesTextChange = { jobNotesText = it },
+            aiSummary = aiSummary,
+            onAiSummaryChange = { aiSummary = it },
+            isRecording = isRecording,
+            onRecordingChange = { isRecording = it },
+            isGeneratingSummary = isGeneratingSummary,
+            onGeneratingSummaryChange = { isGeneratingSummary = it },
+            onSave = { notes, summary ->
+                // TODO: Save notes and summary to the time entry
+                // TODO: Share functionality
+                // TODO: Send to server
+                
+                // For now, actually clock out
+                viewModel.clockOut()
+                
+                // Close dialog
+                showJobNotesDialog = false
+                jobNotesEntry = null
+                jobNotesText = ""
+                aiSummary = ""
+                
+                println("📝 Job notes saved - Notes: $notes, Summary: $summary")
+            },
+            onCancel = {
+                showJobNotesDialog = false
+                jobNotesEntry = null
+                jobNotesText = ""
+                aiSummary = ""
             }
         )
     }
@@ -1784,4 +1839,184 @@ private fun updateTime(hour: Int, minute: Int, onTimeSelected: (Date) -> Unit) {
     calendar.set(Calendar.HOUR_OF_DAY, hour)
     calendar.set(Calendar.MINUTE, minute)
     onTimeSelected(calendar.time)
+}
+
+@Composable
+fun JobNotesDialog(
+    entry: TimeEntry?,
+    jobNotesText: String,
+    onJobNotesTextChange: (String) -> Unit,
+    aiSummary: String,
+    onAiSummaryChange: (String) -> Unit,
+    isRecording: Boolean,
+    onRecordingChange: (Boolean) -> Unit,
+    isGeneratingSummary: Boolean,
+    onGeneratingSummaryChange: (Boolean) -> Unit,
+    onSave: (String, String) -> Unit,
+    onCancel: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onCancel
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Header
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Job Notes",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    entry?.let {
+                        Text(
+                            text = "Customer: ${it.customerName}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                
+                // Notes input section
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "Job Notes",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    
+                    // Text input
+                    OutlinedTextField(
+                        value = jobNotesText,
+                        onValueChange = onJobNotesTextChange,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                        placeholder = { Text("Enter job notes...") },
+                        maxLines = 5
+                    )
+                    
+                    // Voice input and AI buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Voice input button
+                        OutlinedButton(
+                            onClick = {
+                                // TODO: Implement speech-to-text
+                                onRecordingChange(!isRecording)
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = if (isRecording) Color.Red else Color.Blue
+                            ),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Star,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(if (isRecording) "Stop Recording" else "Voice Input")
+                        }
+                        
+                        // AI Summarize button
+                        OutlinedButton(
+                            onClick = {
+                                // TODO: Implement OpenAI summarization
+                                if (jobNotesText.isNotBlank()) {
+                                    onGeneratingSummaryChange(true)
+                                    // Simulate AI summary generation
+                                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                        onAiSummaryChange("""
+                                            Customer: ${entry?.customerName ?: "Unknown"}
+                                            
+                                            Work Description: ${jobNotesText.take(100)}...
+                                            
+                                            Follow-up Steps:
+                                            • Review completed work
+                                            • Schedule follow-up if needed
+                                            • Update customer on completion status
+                                        """.trimIndent())
+                                        onGeneratingSummaryChange(false)
+                                    }, 2000)
+                                }
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color(0xFF9C27B0)
+                            ),
+                            enabled = jobNotesText.isNotBlank() && !isGeneratingSummary,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            if (isGeneratingSummary) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Summarize")
+                        }
+                    }
+                }
+                
+                // AI Summary section
+                if (aiSummary.isNotBlank()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "AI Summary",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color.Green.copy(alpha = 0.1f)
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = aiSummary,
+                                modifier = Modifier.padding(12.dp),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+                
+                // Action buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onCancel,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Cancel")
+                    }
+                    
+                    Button(
+                        onClick = { onSave(jobNotesText, aiSummary) },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Save & Clock Out")
+                    }
+                }
+            }
+        )
+    }
 }
