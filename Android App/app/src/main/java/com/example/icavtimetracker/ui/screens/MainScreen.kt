@@ -2093,7 +2093,7 @@ fun JobNotesDialog(
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(
-                                imageVector = if (speechIsRecording) Icons.Default.Close else Icons.Default.Mic,
+                                imageVector = if (speechIsRecording) Icons.Default.Clear else Icons.Default.Add,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -2191,4 +2191,3 @@ fun JobNotesDialog(
         )
     }
 }
-
