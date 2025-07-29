@@ -435,7 +435,13 @@ fun MainScreen(
                         
                         if (updatedEntry != null) {
                             // Sync to server first
-                            val success = syncTimeEntryToServer(updatedEntry)
+                            val success = try {
+                                // TODO: Implement actual server sync using APIService
+                                delay(1000) // Simulate network delay
+                                true
+                            } catch (e: Exception) {
+                                false
+                            }
                             
                             if (success) {
                                 println("✅ Successfully synced to server")
@@ -2087,7 +2093,7 @@ fun JobNotesDialog(
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(
-                                imageVector = if (speechIsRecording) Icons.Default.Stop else Icons.Default.KeyboardVoice,
+                                imageVector = if (speechIsRecording) Icons.Default.Close else Icons.Default.Mic,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -2186,14 +2192,3 @@ fun JobNotesDialog(
     }
 }
 
-suspend fun syncTimeEntryToServer(timeEntry: TimeEntry): Boolean {
-    // TODO: Implement actual server sync using APIService
-    // For now, simulate success
-    return try {
-        // Simulate network delay
-        delay(1000) // 1 second
-        true
-    } catch (e: Exception) {
-        false
-    }
-}
