@@ -356,38 +356,10 @@ fun MainScreen(
                         onEdit = { 
                             editingEntry = entry
                             showEditDialog = true
-                                    }
-        )
-    }
-    
-    // Show error dialog for speech recognition errors
-    if (speechErrorMessage.isNotEmpty()) {
-        AlertDialog(
-            onDismissRequest = { speechManager.clearError() },
-            title = { Text("Speech Recognition Error") },
-            text = { Text(speechErrorMessage) },
-            confirmButton = {
-                TextButton(onClick = { speechManager.clearError() }) {
-                    Text("OK")
+                        }
+                    )
                 }
             }
-        )
-    }
-    
-    // Show error dialog for OpenAI errors
-    if (openAIErrorMessage.isNotEmpty()) {
-        AlertDialog(
-            onDismissRequest = { openAIService.clearError() },
-            title = { Text("AI Summary Error") },
-            text = { Text(openAIErrorMessage) },
-            confirmButton = {
-                TextButton(onClick = { openAIService.clearError() }) {
-                    Text("OK")
-                }
-            }
-        )
-    }
-}
             
             // Error message
             if (error != null) {
@@ -954,6 +926,34 @@ fun MainScreen(
                 initialTime = driveEndTime ?: Date()
             )
         }
+    }
+    
+    // Show error dialog for speech recognition errors
+    if (speechErrorMessage.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = { speechManager.clearError() },
+            title = { Text("Speech Recognition Error") },
+            text = { Text(speechErrorMessage) },
+            confirmButton = {
+                TextButton(onClick = { speechManager.clearError() }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+    
+    // Show error dialog for OpenAI errors
+    if (openAIErrorMessage.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = { openAIService.clearError() },
+            title = { Text("AI Summary Error") },
+            text = { Text(openAIErrorMessage) },
+            confirmButton = {
+                TextButton(onClick = { openAIService.clearError() }) {
+                    Text("OK")
+                }
+            }
+        )
     }
 }
 
@@ -2087,7 +2087,7 @@ fun JobNotesDialog(
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(
-                                imageVector = if (speechIsRecording) Icons.Default.Pause else Icons.Default.Mic,
+                                imageVector = if (speechIsRecording) Icons.Default.Stop else Icons.Default.KeyboardVoice,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -2186,7 +2186,7 @@ fun JobNotesDialog(
     }
 }
 
-private suspend fun syncTimeEntryToServer(timeEntry: TimeEntry): Boolean {
+suspend fun syncTimeEntryToServer(timeEntry: TimeEntry): Boolean {
     // TODO: Implement actual server sync using APIService
     // For now, simulate success
     return try {
