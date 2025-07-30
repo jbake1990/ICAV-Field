@@ -8,6 +8,7 @@ import com.example.icavtimetracker.AuthManager
 import com.example.icavtimetracker.data.ClockStatus
 import com.example.icavtimetracker.data.TimeEntry
 import com.example.icavtimetracker.data.User
+import com.example.icavtimetracker.data.JobAssignment
 import com.example.icavtimetracker.repository.TimeTrackerRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -50,6 +51,12 @@ class TimeTrackerViewModel(application: Application) : AndroidViewModel(applicat
     
     private val _pendingSyncCount = MutableStateFlow(0)
     val pendingSyncCount: StateFlow<Int> = _pendingSyncCount.asStateFlow()
+    
+    private val _jobAssignments = MutableStateFlow<List<JobAssignment>>(emptyList())
+    val jobAssignments: StateFlow<List<JobAssignment>> = _jobAssignments.asStateFlow()
+    
+    private val _selectedJobAssignment = MutableStateFlow<JobAssignment?>(null)
+    val selectedJobAssignment: StateFlow<JobAssignment?> = _selectedJobAssignment.asStateFlow()
     
     // Sync operations
     private val syncInProgress = mutableSetOf<String>() // Track ongoing syncs by entry ID
@@ -685,6 +692,96 @@ class TimeTrackerViewModel(application: Application) : AndroidViewModel(applicat
                 }
             }
             _timeEntries.value = updatedList
+        }
+    }
+    
+    fun loadJobAssignments() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                Log.d("TimeTrackerViewModel", "Loading job assignments...")
+                val currentUser = _currentUser.value
+                if (currentUser == null) {
+                    Log.e("TimeTrackerViewModel", "No current user available")
+                    return@launch
+                }
+                
+                // Get today's date in ISO format
+                val today = java.time.LocalDate.now()
+                val startDate = today.toString()
+                val endDate = today.toString()
+                
+                repository.getJobAssignments(
+                    userId = currentUser.id,
+                    startDate = startDate,
+                    endDate = endDate
+                ).fold(
+                    onSuccess = { assignments ->
+                        Log.d("TimeTrackerViewModel", "Successfully loaded ${assignments.size} job assignments")
+                        _jobAssignments.value = assignments
+                    },
+                    onFailure = { exception ->
+                        Log.e("TimeTrackerViewModel", "Failed to load job assignments: ${exception.message}")
+                        _error.value = "Failed to load job assignments: ${exception.message}"
+                    }
+                )
+            } catch (e: Exception) {
+                Log.e("TimeTrackerViewModel", "Exception loading job assignments", e)
+                _error.value = "Exception loading job assignments: ${e.message}"
+            }
+        }
+    }
+    
+    fun selectJobAssignment(assignment: JobAssignment) {
+        Log.d("TimeTrackerViewModel", "Selecting job assignment: ${assignment.job?.customerName}")
+        _selectedJobAssignment.value = assignment
+        
+        // Create a time entry for this job assignment
+        createTimeEntryFromAssignment(assignment)
+    }
+    
+    private fun createTimeEntryFromAssignment(assignment: JobAssignment) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val currentUser = _currentUser.value
+                if (currentUser == null) {
+                    Log.e("TimeTrackerViewModel", "No current user available")
+                    return@launch
+                }
+                
+                val job = assignment.job
+                if (job == null) {
+                    Log.e("TimeTrackerViewModel", "No job data available for assignment")
+                    return@launch
+                }
+                
+                Log.d("TimeTrackerViewModel", "Creating time entry for job: ${job.customerName}")
+                
+                // Create a new time entry for this job
+                val newEntry = TimeEntry(
+                    userId = currentUser.id,
+                    technicianName = currentUser.displayName,
+                    customerName = job.customerName,
+                    jobAssignmentId = assignment.id // Link to the job assignment
+                )
+                
+                // Add to local entries
+                val currentEntries = _timeEntries.value.toMutableList()
+                currentEntries.add(newEntry)
+                _timeEntries.value = currentEntries
+                
+                // Set as current entry
+                _currentEntry.value = newEntry
+                
+                // Mark for sync
+                newEntry.markForSync()
+                updatePendingSyncCount()
+                
+                Log.d("TimeTrackerViewModel", "Created time entry for job assignment: ${newEntry.id}")
+                
+            } catch (e: Exception) {
+                Log.e("TimeTrackerViewModel", "Exception creating time entry from assignment", e)
+                _error.value = "Exception creating time entry: ${e.message}"
+            }
         }
     }
     

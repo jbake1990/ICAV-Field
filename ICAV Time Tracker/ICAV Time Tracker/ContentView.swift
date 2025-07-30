@@ -40,6 +40,11 @@ struct ContentView: View {
         }
     }
     
+    // Job assignments from web portal
+    private var jobAssignments: [JobAssignment] {
+        viewModel.jobAssignments
+    }
+    
     init() {
         let auth = AuthManager()
         self._authManager = StateObject(wrappedValue: auth)
@@ -57,6 +62,11 @@ struct ContentView: View {
                         } else {
                             // Try to preserve selection after sync/filter
                             selectedJob = findMatchingJob(in: jobs, for: selectedJob)
+                        }
+                        
+                        // Load job assignments
+                        Task {
+                            await viewModel.loadJobAssignments()
                         }
                     }
                     .sheet(isPresented: $showingNewJobAlert) {
@@ -308,7 +318,7 @@ struct ContentView: View {
             // Jobs List with New Job button
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text("Jobs")
+                    Text("Scheduled Jobs")
                         .font(.headline)
                     Spacer()
                     Button(action: { 
@@ -322,23 +332,78 @@ struct ContentView: View {
                     .foregroundColor(.blue)
                 }
                 .padding(.horizontal)
-                List(jobs) { job in
-                    HStack {
-                        Text(job.customerName)
-                        Spacer()
-                        if selectedJob?.id == job.id {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.blue)
+                
+                // Show scheduled job assignments first
+                if !jobAssignments.isEmpty {
+                    ScrollView {
+                        LazyVStack(spacing: 8) {
+                            ForEach(jobAssignments) { assignment in
+                                if let job = assignment.job {
+                                    Button(action: {
+                                        viewModel.selectJobAssignment(assignment)
+                                    }) {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(job.customerName)
+                                                .font(.headline)
+                                                .foregroundColor(.primary)
+                                            if let location = job.location, !location.isEmpty {
+                                                Text(location)
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                            HStack {
+                                                Text("\(assignment.assignedHours)h")
+                                                    .font(.caption)
+                                                    .foregroundColor(.blue)
+                                                Spacer()
+                                                Text("Scheduled")
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                        }
+                                        .padding()
+                                        .background(Color(.systemGray6))
+                                        .cornerRadius(8)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                    .frame(maxHeight: 150)
+                    
+                    Divider()
+                        .padding(.horizontal)
+                }
+                
+                // Show existing time entries
+                if !jobs.isEmpty {
+                    Text("Active Jobs")
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
+                    
+                    List(jobs) { job in
+                        HStack {
+                            Text(job.customerName)
+                            Spacer()
+                            if selectedJob?.id == job.id {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            selectedJob = job
                         }
                     }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        selectedJob = job
-                    }
+                    .listStyle(PlainListStyle())
+                    .frame(maxHeight: 200)
                 }
-                .listStyle(PlainListStyle())
             }
-            .frame(maxHeight: 250)
+            .frame(maxHeight: 350)
         }
     }
     

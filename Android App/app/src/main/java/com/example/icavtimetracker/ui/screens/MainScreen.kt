@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.icavtimetracker.data.JobAssignment
 import com.example.icavtimetracker.OpenAIService
 import com.example.icavtimetracker.PDFGenerator
 import com.example.icavtimetracker.ShareManager
@@ -92,11 +93,20 @@ fun MainScreen(
         today.get(Calendar.DAY_OF_YEAR) == entryDate.get(Calendar.DAY_OF_YEAR)
     }.sortedByDescending { it.clockInTime ?: it.driveStartTime ?: Date(0) }
 
+    // Job assignments from web portal
+    val jobAssignments by viewModel.jobAssignments.collectAsStateWithLifecycle()
+    val selectedJobAssignment by viewModel.selectedJobAssignment.collectAsStateWithLifecycle()
+
     // Auto-select first job if none selected
     LaunchedEffect(todayJobs) {
         if (selectedJob == null && todayJobs.isNotEmpty()) {
             selectedJob = todayJobs.first()
         }
+    }
+
+    // Load job assignments when component mounts
+    LaunchedEffect(Unit) {
+        viewModel.loadJobAssignments()
     }
 
     Column(
@@ -372,7 +382,7 @@ fun MainScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Jobs",
+                    text = "Scheduled Jobs",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -388,16 +398,91 @@ fun MainScreen(
             
             Spacer(modifier = Modifier.height(8.dp))
             
-            LazyColumn(
-                modifier = Modifier.heightIn(max = 250.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(todayJobs) { job ->
-                    JobListItem(
-                        job = job,
-                        isSelected = selectedJob?.id == job.id,
-                        onClick = { selectedJob = job }
-                    )
+            // Show scheduled job assignments first
+            if (jobAssignments.isNotEmpty()) {
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 150.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(jobAssignments) { assignment ->
+                        val job = assignment.job
+                        if (job != null) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { 
+                                        viewModel.selectJobAssignment(assignment)
+                                    },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (selectedJobAssignment?.id == assignment.id) 
+                                        MaterialTheme.colorScheme.primaryContainer 
+                                    else 
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp)
+                                ) {
+                                    Text(
+                                        text = job.customerName,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    if (!job.location.isNullOrBlank()) {
+                                        Text(
+                                            text = job.location,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "${assignment.assignedHours}h",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Text(
+                                            text = "Scheduled",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.secondary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                Divider()
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            
+            // Show existing time entries
+            if (todayJobs.isNotEmpty()) {
+                Text(
+                    text = "Active Jobs",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 200.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(todayJobs) { job ->
+                        JobListItem(
+                            job = job,
+                            isSelected = selectedJob?.id == job.id,
+                            onClick = { selectedJob = job }
+                        )
+                    }
                 }
             }
         }

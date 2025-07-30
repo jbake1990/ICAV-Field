@@ -46,6 +46,27 @@ interface ApiService {
     
     @GET("api/health")
     suspend fun healthCheck(): Response<HealthResponse>
+    
+    @GET("api/job-assignments")
+    suspend fun getJobAssignments(
+        @Header("Authorization") token: String,
+        @Query("userId") userId: String? = null,
+        @Query("startDate") startDate: String? = null,
+        @Query("endDate") endDate: String? = null
+    ): Response<List<JobAssignmentResponse>>
+    
+    @POST("api/job-assignments")
+    suspend fun createJobAssignment(
+        @Header("Authorization") token: String,
+        @Body assignment: JobAssignmentRequest
+    ): Response<JobAssignmentResponse>
+    
+    @PUT("api/job-assignments/{id}")
+    suspend fun updateJobAssignment(
+        @Header("Authorization") token: String,
+        @Path("id") id: String,
+        @Body assignment: JobAssignmentRequest
+    ): Response<JobAssignmentResponse>
 }
 
 data class LoginRequest(
@@ -70,6 +91,7 @@ data class TimeEntryRequest(
     val userId: String,
     val technicianName: String,
     val customerName: String,
+    val jobAssignmentId: String? = null,
     val clockInTime: String? = null,
     val clockOutTime: String? = null,
     val lunchStartTime: String? = null,
@@ -85,6 +107,7 @@ data class TimeEntryResponse(
     val userId: String,
     val technicianName: String,
     val customerName: String,
+    val jobAssignmentId: String? = null,
     val clockInTime: String?,
     val clockOutTime: String?,
     val lunchStartTime: String?,
@@ -98,4 +121,46 @@ data class TimeEntryResponse(
 data class HealthResponse(
     val status: String,
     val timestamp: String
+)
+
+data class JobAssignmentRequest(
+    val id: String? = null,
+    val jobId: String,
+    val userId: String,
+    val technicianName: String? = null,
+    val assignedDate: String,
+    val assignedHours: Int,
+    val actualHours: Int? = null,
+    val status: String = "assigned",
+    val notes: String? = null,
+    val order: Int? = null
+)
+
+data class JobAssignmentResponse(
+    val id: String,
+    val jobId: String,
+    val userId: String,
+    val technicianName: String,
+    val assignedDate: String,
+    val assignedHours: Int,
+    val actualHours: Int?,
+    val status: String,
+    val notes: String?,
+    val order: Int?,
+    val createdAt: String,
+    val updatedAt: String,
+    val job: JobResponse? = null
+)
+
+data class JobResponse(
+    val id: String,
+    val title: String,
+    val customerName: String,
+    val description: String?,
+    val location: String?,
+    val estimatedHours: Int,
+    val status: String,
+    val priority: String,
+    val createdAt: String,
+    val updatedAt: String
 ) 

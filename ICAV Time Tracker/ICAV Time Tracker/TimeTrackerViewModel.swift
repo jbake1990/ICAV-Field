@@ -12,6 +12,8 @@ import SwiftUI
 class TimeTrackerViewModel: ObservableObject {
     @Published var customerName: String = ""
     @Published var timeEntries: [TimeEntry] = []
+    @Published var jobAssignments: [JobAssignment] = []
+    @Published var selectedJobAssignment: JobAssignment?
     @Published var currentStatus: ClockStatus = .clockedOut
     @Published var showingAlert = false
     @Published var alertMessage = ""
@@ -770,6 +772,86 @@ class TimeTrackerViewModel: ObservableObject {
             }
         } else {
             print("⚠️ Not online, skipping immediate sync")
+        }
+    }
+    
+    func loadJobAssignments() async {
+        guard let currentUser = authManager.currentUser else {
+            print("❌ No current user available")
+            return
+        }
+        
+        do {
+            print("📋 Loading job assignments for user: \(currentUser.id)")
+            
+            // Get today's date in ISO format
+            let today = Date()
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withFullDate]
+            let startDate = formatter.string(from: today)
+            let endDate = startDate
+            
+            let assignments = try await apiService.getJobAssignments(
+                userId: currentUser.id,
+                startDate: startDate,
+                endDate: endDate
+            )
+            
+            print("✅ Successfully loaded \(assignments.count) job assignments")
+            await MainActor.run {
+                self.jobAssignments = assignments
+            }
+        } catch {
+            print("❌ Failed to load job assignments: \(error)")
+            await MainActor.run {
+                showAlert("Failed to load job assignments: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    func selectJobAssignment(_ assignment: JobAssignment) {
+        print("📋 Selecting job assignment: \(assignment.job?.customerName ?? "Unknown")")
+        selectedJobAssignment = assignment
+        
+        // Create a time entry for this job assignment
+        createTimeEntryFromAssignment(assignment)
+    }
+    
+    private func createTimeEntryFromAssignment(_ assignment: JobAssignment) {
+        guard let currentUser = authManager.currentUser else {
+            print("❌ No current user available")
+            return
+        }
+        
+        guard let job = assignment.job else {
+            print("❌ No job data available for assignment")
+            return
+        }
+        
+        print("📋 Creating time entry for job: \(job.customerName)")
+        
+        // Create a new time entry for this job
+        var newEntry = TimeEntry(
+            userId: currentUser.id,
+            technicianName: currentUser.displayName,
+            customerName: job.customerName,
+            jobAssignmentId: assignment.id // Link to the job assignment
+        )
+        
+        // Add to local entries
+        timeEntries.append(newEntry)
+        
+        // Mark for sync
+        newEntry.markForSync()
+        saveData()
+        
+        print("✅ Created time entry for job assignment: \(newEntry.id)")
+        
+        // Sync immediately
+        if authManager.isOnline {
+            Task {
+                await syncEntry(newEntry)
+            }
         }
     }
     

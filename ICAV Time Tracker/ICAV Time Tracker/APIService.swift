@@ -48,6 +48,35 @@ struct AuthRequest: Codable {
     let sessionToken: String?
 }
 
+struct APIJobAssignment: Codable {
+    let id: String
+    let jobId: String
+    let userId: String
+    let technicianName: String
+    let assignedDate: String
+    let assignedHours: Int
+    let actualHours: Int?
+    let status: String
+    let notes: String?
+    let order: Int?
+    let createdAt: String
+    let updatedAt: String
+    let job: APIJob?
+}
+
+struct APIJob: Codable {
+    let id: String
+    let title: String
+    let customerName: String
+    let description: String?
+    let location: String?
+    let estimatedHours: Int
+    let status: String
+    let priority: String
+    let createdAt: String
+    let updatedAt: String
+}
+
 // MARK: - Network Errors
 enum APIError: Error, LocalizedError {
     case invalidURL
@@ -222,6 +251,89 @@ class APIService: ObservableObject {
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200 else {
             throw APIError.serverError("Logout failed")
+        }
+    }
+    
+    // MARK: - Job Assignments
+    func getJobAssignments(userId: String? = nil, startDate: String? = nil, endDate: String? = nil) async throws -> [JobAssignment] {
+        guard let token = AuthManager.shared.getAuthToken() else {
+            throw APIError.unauthorized
+        }
+        
+        var urlComponents = URLComponents(string: "\(baseURL)/api/job-assignments")!
+        var queryItems: [URLQueryItem] = []
+        
+        if let userId = userId {
+            queryItems.append(URLQueryItem(name: "userId", value: userId))
+        }
+        if let startDate = startDate {
+            queryItems.append(URLQueryItem(name: "startDate", value: startDate))
+        }
+        if let endDate = endDate {
+            queryItems.append(URLQueryItem(name: "endDate", value: endDate))
+        }
+        
+        urlComponents.queryItems = queryItems
+        
+        guard let url = urlComponents.url else {
+            throw APIError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        do {
+            let (data, response) = try await session.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw APIError.invalidResponse
+            }
+            
+            if httpResponse.statusCode == 401 {
+                throw APIError.unauthorized
+            }
+            
+            guard httpResponse.statusCode == 200 else {
+                throw APIError.serverError("Status code: \(httpResponse.statusCode)")
+            }
+            
+            let apiAssignments = try JSONDecoder().decode([APIJobAssignment].self, from: data)
+            
+            return apiAssignments.map { apiAssignment in
+                JobAssignment(
+                    id: apiAssignment.id,
+                    jobId: apiAssignment.jobId,
+                    userId: apiAssignment.userId,
+                    technicianName: apiAssignment.technicianName,
+                    assignedDate: dateFormatter.date(from: apiAssignment.assignedDate) ?? Date(),
+                    assignedHours: apiAssignment.assignedHours,
+                    actualHours: apiAssignment.actualHours,
+                    status: apiAssignment.status,
+                    notes: apiAssignment.notes,
+                    order: apiAssignment.order,
+                    createdAt: dateFormatter.date(from: apiAssignment.createdAt) ?? Date(),
+                    updatedAt: dateFormatter.date(from: apiAssignment.updatedAt) ?? Date(),
+                    job: apiAssignment.job.map { apiJob in
+                        Job(
+                            id: apiJob.id,
+                            title: apiJob.title,
+                            customerName: apiJob.customerName,
+                            description: apiJob.description,
+                            location: apiJob.location,
+                            estimatedHours: apiJob.estimatedHours,
+                            status: apiJob.status,
+                            priority: apiJob.priority,
+                            createdAt: dateFormatter.date(from: apiJob.createdAt) ?? Date(),
+                            updatedAt: dateFormatter.date(from: apiJob.updatedAt) ?? Date()
+                        )
+                    }
+                )
+            }
+        } catch {
+            print("❌ Job assignments API error: \(error)")
+            throw error
         }
     }
     

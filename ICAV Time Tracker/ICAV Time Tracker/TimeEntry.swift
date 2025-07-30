@@ -12,6 +12,7 @@ struct TimeEntry: Identifiable, Codable {
     let userId: String
     let technicianName: String
     let customerName: String
+    let jobAssignmentId: String?
     
     var clockInTime: Date?
     var clockOutTime: Date?
@@ -39,6 +40,7 @@ struct TimeEntry: Identifiable, Codable {
         self.userId = userId
         self.technicianName = technicianName
         self.customerName = customerName
+        self.jobAssignmentId = nil
         self.clockInTime = clockInTime
         self.clockOutTime = clockOutTime
         self.lunchStartTime = lunchStartTime
@@ -55,6 +57,7 @@ struct TimeEntry: Identifiable, Codable {
         self.userId = userId
         self.technicianName = technicianName
         self.customerName = customerName
+        self.jobAssignmentId = nil
         self.clockInTime = nil
         self.clockOutTime = nil
         self.lunchStartTime = nil
@@ -66,11 +69,12 @@ struct TimeEntry: Identifiable, Codable {
     }
     
     // New initializer for a job with no clock-in or drive time
-    init(userId: String, technicianName: String, customerName: String) {
+    init(userId: String, technicianName: String, customerName: String, jobAssignmentId: String? = nil) {
         self.id = UUID()
         self.userId = userId
         self.technicianName = technicianName
         self.customerName = customerName
+        self.jobAssignmentId = jobAssignmentId
         self.clockInTime = nil
         self.clockOutTime = nil
         self.lunchStartTime = nil

@@ -12,6 +12,8 @@ data class TimeEntry(
     val technicianName: String,
     @SerializedName("customerName")
     val customerName: String,
+    @SerializedName("jobAssignmentId")
+    val jobAssignmentId: String? = null,
     
     @SerializedName("clockInTime")
     val clockInTime: Date? = null,

@@ -3,6 +3,8 @@ package com.example.icavtimetracker.repository
 import android.util.Log
 import com.example.icavtimetracker.data.TimeEntry
 import com.example.icavtimetracker.data.User
+import com.example.icavtimetracker.data.JobAssignment
+import com.example.icavtimetracker.data.Job
 import com.example.icavtimetracker.network.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -125,6 +127,7 @@ class TimeTrackerRepository {
                     userId = timeEntry.userId,
                     technicianName = timeEntry.technicianName,
                     customerName = timeEntry.customerName,
+                    jobAssignmentId = timeEntry.jobAssignmentId,
                     clockInTime = timeEntry.clockInTime?.let { dateFormatter.format(it) },
                     clockOutTime = timeEntry.clockOutTime?.let { dateFormatter.format(it) },
                     lunchStartTime = timeEntry.lunchStartTime?.let { dateFormatter.format(it) },
@@ -180,6 +183,7 @@ class TimeTrackerRepository {
                     userId = timeEntry.userId,
                     technicianName = timeEntry.technicianName,
                     customerName = timeEntry.customerName,
+                    jobAssignmentId = timeEntry.jobAssignmentId,
                     clockInTime = timeEntry.clockInTime?.let { dateFormatter.format(it) },
                     clockOutTime = timeEntry.clockOutTime?.let { dateFormatter.format(it) },
                     lunchStartTime = timeEntry.lunchStartTime?.let { dateFormatter.format(it) },
@@ -225,6 +229,7 @@ class TimeTrackerRepository {
             userId = response.userId,
             technicianName = response.technicianName,
             customerName = response.customerName,
+            jobAssignmentId = response.jobAssignmentId,
             clockInTime = response.clockInTime?.let { parseDateString(it) },
             clockOutTime = response.clockOutTime?.let { parseDateString(it) },
             lunchStartTime = response.lunchStartTime?.let { parseDateString(it) },
@@ -320,6 +325,63 @@ class TimeTrackerRepository {
                 val response = apiService.healthCheck()
                 Result.success(response.isSuccessful)
             } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+    
+    suspend fun getJobAssignments(userId: String? = null, startDate: String? = null, endDate: String? = null): Result<List<JobAssignment>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val token = authToken ?: return@withContext Result.failure(Exception("No auth token available"))
+                Log.d("TimeTrackerRepository", "Fetching job assignments")
+                
+                val response = apiService.getJobAssignments("Bearer $token", userId, startDate, endDate)
+                Log.d("TimeTrackerRepository", "Get job assignments response code: ${response.code()}")
+                
+                if (response.isSuccessful) {
+                    val responseAssignments = response.body() ?: emptyList()
+                    Log.d("TimeTrackerRepository", "Received ${responseAssignments.size} job assignments")
+                    
+                    val assignments = responseAssignments.map { assignmentResponse ->
+                        JobAssignment(
+                            id = assignmentResponse.id,
+                            jobId = assignmentResponse.jobId,
+                            userId = assignmentResponse.userId,
+                            technicianName = assignmentResponse.technicianName,
+                            assignedDate = isoDateFormatter.parse(assignmentResponse.assignedDate) ?: Date(),
+                            assignedHours = assignmentResponse.assignedHours,
+                            actualHours = assignmentResponse.actualHours,
+                            status = assignmentResponse.status,
+                            notes = assignmentResponse.notes,
+                            order = assignmentResponse.order,
+                            createdAt = isoDateFormatter.parse(assignmentResponse.createdAt) ?: Date(),
+                            updatedAt = isoDateFormatter.parse(assignmentResponse.updatedAt) ?: Date(),
+                            job = assignmentResponse.job?.let { jobResponse ->
+                                Job(
+                                    id = jobResponse.id,
+                                    title = jobResponse.title,
+                                    customerName = jobResponse.customerName,
+                                    description = jobResponse.description,
+                                    location = jobResponse.location,
+                                    estimatedHours = jobResponse.estimatedHours,
+                                    status = jobResponse.status,
+                                    priority = jobResponse.priority,
+                                    createdAt = isoDateFormatter.parse(jobResponse.createdAt) ?: Date(),
+                                    updatedAt = isoDateFormatter.parse(jobResponse.updatedAt) ?: Date()
+                                )
+                            }
+                        )
+                    }
+                    
+                    Log.d("TimeTrackerRepository", "Successfully converted ${assignments.size} job assignments")
+                    Result.success(assignments)
+                } else {
+                    Log.e("TimeTrackerRepository", "Get job assignments failed with code: ${response.code()}")
+                    Result.failure(Exception("Failed to fetch job assignments: ${response.code()}"))
+                }
+            } catch (e: Exception) {
+                Log.e("TimeTrackerRepository", "Get job assignments exception: ${e.message}", e)
                 Result.failure(e)
             }
         }
