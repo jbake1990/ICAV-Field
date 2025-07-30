@@ -29,15 +29,24 @@ module.exports = async function handler(req, res) {
     console.log('Total time entries:', totalEntries);
     
     // Get sample data (first entry)
-    const sampleData = await sql`
-      SELECT id, customer_name, technician_name, 
-             ${hasJobNotes ? sql`job_notes,` : sql``}
-             ${hasAiSummary ? sql`ai_summary,` : sql``}
-             clock_in_time, clock_out_time
-      FROM time_entries 
-      ORDER BY clock_in_time DESC 
-      LIMIT 1
-    `;
+    let sampleData;
+    if (hasJobNotes && hasAiSummary) {
+      sampleData = await sql`
+        SELECT id, customer_name, technician_name, job_notes, ai_summary,
+               clock_in_time, clock_out_time
+        FROM time_entries 
+        ORDER BY clock_in_time DESC 
+        LIMIT 1
+      `;
+    } else {
+      sampleData = await sql`
+        SELECT id, customer_name, technician_name,
+               clock_in_time, clock_out_time
+        FROM time_entries 
+        ORDER BY clock_in_time DESC 
+        LIMIT 1
+      `;
+    }
     
     console.log('Sample entry:', sampleData.rows[0]);
     
