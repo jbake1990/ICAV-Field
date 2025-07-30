@@ -42,13 +42,21 @@ export default function JobCalendar({
     location: string;
     priority: 'low' | 'medium' | 'high';
     status: JobStatus;
+    estimatedHours: number;
   }>({
     customerName: '',
     description: '',
     location: '',
     priority: 'medium',
-    status: 'draft'
+    status: 'draft',
+    estimatedHours: 8
   });
+
+  // State for editing assignment hours
+  const [editingAssignment, setEditingAssignment] = useState<{
+    assignmentId: string;
+    hours: number;
+  } | null>(null);
 
   // Get the start of the current week (Monday)
   const getWeekStart = (date: Date) => {
@@ -281,7 +289,7 @@ export default function JobCalendar({
         customerName: newJob.customerName,
         description: newJob.description,
         location: newJob.location,
-        estimatedHours: 8, // Default to 8 hours
+        estimatedHours: newJob.estimatedHours,
         priority: newJob.priority,
         status: newJob.status,
         createdBy: 'admin'
@@ -296,7 +304,8 @@ export default function JobCalendar({
         description: '',
         location: '',
         priority: 'medium',
-        status: 'draft'
+        status: 'draft',
+        estimatedHours: 8
       });
       setShowCreateJob(false);
       console.log('JobCalendar - Job created successfully');
@@ -330,6 +339,23 @@ export default function JobCalendar({
       console.error('JobCalendar - Failed to move job to unassigned:', error);
       alert('Failed to move job to unassigned: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
+  };
+
+  // Handle editing assignment hours
+  const handleEditAssignmentHours = async (assignmentId: string, newHours: number) => {
+    try {
+      await onUpdateAssignment(assignmentId, { assignedHours: newHours });
+      setEditingAssignment(null);
+      console.log('JobCalendar - Assignment hours updated successfully');
+    } catch (error) {
+      console.error('JobCalendar - Failed to update assignment hours:', error);
+      alert('Failed to update assignment hours: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
+  // Handle double-click to edit hours
+  const handleDoubleClickAssignment = (assignmentId: string, currentHours: number) => {
+    setEditingAssignment({ assignmentId, hours: currentHours });
   };
 
   return (
@@ -504,45 +530,46 @@ export default function JobCalendar({
                           if (!job) return null;
                           
                           return (
-                                                         <div
-                               key={assignment.id}
-                               className={`p-2 border rounded text-xs transition-colors ${
-                                 job.priority === 'high' ? 'bg-red-100 border-red-200' :
-                                 job.priority === 'medium' ? 'bg-yellow-100 border-yellow-200' :
-                                 'bg-green-100 border-green-200'
-                               }`}
-                             >
-                               <div 
-                                 draggable
-                                 onDragStart={(e) => handleDragStart(e, job, 'calendar', assignment.id)}
-                                 className="cursor-move"
-                               >
-                                 <div className={`font-medium ${
-                                   job.priority === 'high' ? 'text-red-900' :
-                                   job.priority === 'medium' ? 'text-yellow-900' :
-                                   'text-green-900'
-                                 }`}>{job.title}</div>
-                                 <div className={`${
-                                   job.priority === 'high' ? 'text-red-700' :
-                                   job.priority === 'medium' ? 'text-yellow-700' :
-                                   'text-green-700'
-                                 }`}>{job.customerName}</div>
-                                 <div className={`${
-                                   job.priority === 'high' ? 'text-red-600' :
-                                   job.priority === 'medium' ? 'text-yellow-600' :
-                                   'text-green-600'
-                                 }`}>{assignment.assignedHours}h</div>
-                               </div>
-                               <div className="flex justify-end mt-1">
-                                 <button
-                                   onClick={() => handleMoveToUnassigned(assignment.id)}
-                                   className="text-blue-600 hover:text-blue-800 text-xs px-1 py-0.5 rounded hover:bg-blue-100 transition-colors"
-                                   title="Move back to unassigned"
-                                 >
-                                   <X className="w-2.5 h-2.5" />
-                                 </button>
-                               </div>
-                             </div>
+                            <div
+                              key={assignment.id}
+                              className={`p-1.5 border rounded text-xs transition-colors ${
+                                job.priority === 'high' ? 'bg-red-100 border-red-200' :
+                                job.priority === 'medium' ? 'bg-yellow-100 border-yellow-200' :
+                                'bg-green-100 border-green-200'
+                              }`}
+                            >
+                              <div 
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, job, 'calendar', assignment.id)}
+                                onDoubleClick={() => handleDoubleClickAssignment(assignment.id, assignment.assignedHours)}
+                                className="cursor-move"
+                              >
+                                <div className={`font-medium truncate ${
+                                  job.priority === 'high' ? 'text-red-900' :
+                                  job.priority === 'medium' ? 'text-yellow-900' :
+                                  'text-green-900'
+                                }`}>{job.customerName}</div>
+                                <div className={`truncate ${
+                                  job.priority === 'high' ? 'text-red-700' :
+                                  job.priority === 'medium' ? 'text-yellow-700' :
+                                  'text-green-700'
+                                }`}>{job.location}</div>
+                                <div className={`font-semibold ${
+                                  job.priority === 'high' ? 'text-red-600' :
+                                  job.priority === 'medium' ? 'text-yellow-600' :
+                                  'text-green-600'
+                                }`}>{assignment.assignedHours}h</div>
+                              </div>
+                              <div className="flex justify-end mt-1">
+                                <button
+                                  onClick={() => handleMoveToUnassigned(assignment.id)}
+                                  className="text-blue-600 hover:text-blue-800 text-xs px-1 py-0.5 rounded hover:bg-blue-100 transition-colors"
+                                  title="Move back to unassigned"
+                                >
+                                  <X className="w-2.5 h-2.5" />
+                                </button>
+                              </div>
+                            </div>
                           );
                         })}
                       </div>
@@ -554,10 +581,62 @@ export default function JobCalendar({
                             Total: {totalHours}h
                           </div>
                                                          </div>
-                       )}
-                     </div>
-                   );
-                 })}
+                             )}
+
+      {/* Edit Assignment Hours Modal */}
+      {editingAssignment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Edit Assignment Hours</h3>
+              <button
+                onClick={() => setEditingAssignment(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Assigned Hours
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="24"
+                  value={editingAssignment.hours}
+                  onChange={(e) => setEditingAssignment({ 
+                    ...editingAssignment, 
+                    hours: parseInt(e.target.value) || 1 
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter hours"
+                />
+              </div>
+            </div>
+
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={() => setEditingAssignment(null)}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleEditAssignmentHours(editingAssignment.assignmentId, editingAssignment.hours)}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Update Hours
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+})}
                </React.Fragment>
              ))}
            </div>
@@ -667,6 +746,21 @@ export default function JobCalendar({
                   onChange={(e) => setNewJob({ ...newJob, location: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter job location"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Estimated Hours
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="24"
+                  value={newJob.estimatedHours}
+                  onChange={(e) => setNewJob({ ...newJob, estimatedHours: parseInt(e.target.value) || 1 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter estimated hours"
                 />
               </div>
 
