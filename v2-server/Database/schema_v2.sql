@@ -107,6 +107,7 @@ CREATE TABLE IF NOT EXISTS job_assignments (
     actual_hours DECIMAL(5,2),
     status VARCHAR(20) NOT NULL DEFAULT 'assigned',
     notes TEXT,
+    "order" INTEGER,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -139,6 +140,7 @@ CREATE INDEX IF NOT EXISTS idx_jobs_created_by ON jobs(created_by);
 CREATE INDEX IF NOT EXISTS idx_job_assignments_job_id ON job_assignments(job_id);
 CREATE INDEX IF NOT EXISTS idx_job_assignments_user_id ON job_assignments(user_id);
 CREATE INDEX IF NOT EXISTS idx_job_assignments_assigned_date ON job_assignments(assigned_date);
+CREATE INDEX IF NOT EXISTS idx_job_assignments_order ON job_assignments("order");
 CREATE INDEX IF NOT EXISTS idx_job_notes_time_entry_id ON job_notes(time_entry_id);
 CREATE INDEX IF NOT EXISTS idx_job_notes_user_id ON job_notes(user_id);
 CREATE INDEX IF NOT EXISTS idx_job_notes_job_id ON job_notes(job_id);
