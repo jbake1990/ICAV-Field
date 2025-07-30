@@ -19,6 +19,12 @@ interface DraggedJob {
   sourceAssignmentId?: string;
 }
 
+interface DraggedAssignment {
+  assignmentId: string;
+  job: Job;
+  assignment: JobAssignment;
+}
+
 export default function JobCalendar({ 
   users, 
   jobs, 
@@ -31,6 +37,7 @@ export default function JobCalendar({
 }: JobCalendarProps) {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [draggedJob, setDraggedJob] = useState<DraggedJob | null>(null);
+  const [draggedAssignment, setDraggedAssignment] = useState<DraggedAssignment | null>(null);
   const [showCreateJob, setShowCreateJob] = useState(false);
   const [showDeleteJob, setShowDeleteJob] = useState(false);
   const [jobToDelete, setJobToDelete] = useState<Job | null>(null);
@@ -176,7 +183,7 @@ export default function JobCalendar({
     return assignments.filter(assignment => 
       assignment.userId === technicianId && 
       assignment.assignedDate.toISOString().split('T')[0] === dateStr
-    );
+    ).sort((a, b) => (a.order || 0) - (b.order || 0));
   };
 
   // Handle drag start for jobs
@@ -358,6 +365,51 @@ export default function JobCalendar({
     setEditingAssignment({ assignmentId, hours: currentHours });
   };
 
+  // Handle assignment drag start for reordering
+  const handleAssignmentDragStart = (e: React.DragEvent, assignment: JobAssignment, job: Job) => {
+    setDraggedAssignment({ assignmentId: assignment.id, job, assignment });
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  // Handle assignment drag over for reordering
+  const handleAssignmentDragOver = (e: React.DragEvent) => {
+    if (draggedAssignment) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = 'move';
+    }
+  };
+
+  // Handle assignment drop for reordering within same day
+  const handleAssignmentDrop = async (e: React.DragEvent, targetAssignmentId: string, technicianId: string, date: Date) => {
+    if (!draggedAssignment || draggedAssignment.assignmentId === targetAssignmentId) {
+      setDraggedAssignment(null);
+      return;
+    }
+    
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Get all assignments for this day
+    const dayAssignments = getAssignmentsForDay(technicianId, date);
+    const draggedIndex = dayAssignments.findIndex(a => a.id === draggedAssignment.assignmentId);
+    const targetIndex = dayAssignments.findIndex(a => a.id === targetAssignmentId);
+    
+    if (draggedIndex !== -1 && targetIndex !== -1) {
+      // Create new order by moving the dragged assignment
+      const newOrder = [...dayAssignments];
+      const [draggedItem] = newOrder.splice(draggedIndex, 1);
+      newOrder.splice(targetIndex, 0, draggedItem);
+      
+      // Update assignments with new order
+      for (let i = 0; i < newOrder.length; i++) {
+        await onUpdateAssignment(newOrder[i].id, { order: i });
+      }
+    }
+    
+    setDraggedAssignment(null);
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -524,7 +576,7 @@ export default function JobCalendar({
                       onDrop={(e) => handleDrop(e, technician.id, day)}
                     >
                       {/* Day assignments */}
-                      <div className="space-y-1">
+                      <div className="space-y-0.5">
                         {dayAssignments.map(assignment => {
                           const job = jobs.find(j => j.id === assignment.jobId);
                           if (!job) return null;
@@ -532,38 +584,45 @@ export default function JobCalendar({
                           return (
                             <div
                               key={assignment.id}
-                              className={`p-1.5 border rounded text-xs transition-colors ${
+                              className={`p-1 border rounded text-xs transition-colors cursor-move ${
+                                draggedAssignment?.assignmentId === assignment.id ? 'opacity-50' : ''
+                              } ${
                                 job.priority === 'high' ? 'bg-red-100 border-red-200' :
                                 job.priority === 'medium' ? 'bg-yellow-100 border-yellow-200' :
                                 'bg-green-100 border-green-200'
                               }`}
+                              draggable
+                              onDragStart={(e) => handleAssignmentDragStart(e, assignment, job)}
+                              onDragOver={handleAssignmentDragOver}
+                              onDrop={(e) => handleAssignmentDrop(e, assignment.id, technician.id, day)}
+                              onDoubleClick={() => handleDoubleClickAssignment(assignment.id, assignment.assignedHours)}
                             >
-                              <div 
-                                draggable
-                                onDragStart={(e) => handleDragStart(e, job, 'calendar', assignment.id)}
-                                onDoubleClick={() => handleDoubleClickAssignment(assignment.id, assignment.assignedHours)}
-                                className="cursor-move"
-                              >
-                                <div className={`font-medium truncate ${
-                                  job.priority === 'high' ? 'text-red-900' :
-                                  job.priority === 'medium' ? 'text-yellow-900' :
-                                  'text-green-900'
-                                }`}>{job.customerName}</div>
-                                <div className={`truncate ${
-                                  job.priority === 'high' ? 'text-red-700' :
-                                  job.priority === 'medium' ? 'text-yellow-700' :
-                                  'text-green-700'
-                                }`}>{job.location}</div>
-                                <div className={`font-semibold ${
-                                  job.priority === 'high' ? 'text-red-600' :
-                                  job.priority === 'medium' ? 'text-yellow-600' :
-                                  'text-green-600'
-                                }`}>{assignment.assignedHours}h</div>
-                              </div>
-                              <div className="flex justify-end mt-1">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <div className={`font-medium truncate ${
+                                    job.priority === 'high' ? 'text-red-900' :
+                                    job.priority === 'medium' ? 'text-yellow-900' :
+                                    'text-green-900'
+                                  }`}>{job.customerName}</div>
+                                  <div className="flex items-center justify-between">
+                                    <div className={`truncate flex-1 ${
+                                      job.priority === 'high' ? 'text-red-700' :
+                                      job.priority === 'medium' ? 'text-yellow-700' :
+                                      'text-green-700'
+                                    }`}>{job.location}</div>
+                                    <div className={`font-semibold ml-1 ${
+                                      job.priority === 'high' ? 'text-red-600' :
+                                      job.priority === 'medium' ? 'text-yellow-600' :
+                                      'text-green-600'
+                                    }`}>{assignment.assignedHours}h</div>
+                                  </div>
+                                </div>
                                 <button
-                                  onClick={() => handleMoveToUnassigned(assignment.id)}
-                                  className="text-blue-600 hover:text-blue-800 text-xs px-1 py-0.5 rounded hover:bg-blue-100 transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleMoveToUnassigned(assignment.id);
+                                  }}
+                                  className="text-blue-600 hover:text-blue-800 text-xs px-1 py-0.5 rounded hover:bg-blue-100 transition-colors ml-1"
                                   title="Move back to unassigned"
                                 >
                                   <X className="w-2.5 h-2.5" />

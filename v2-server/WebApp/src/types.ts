@@ -155,6 +155,7 @@ export interface JobAssignment {
   actualHours?: number;
   status: 'assigned' | 'in_progress' | 'completed' | 'cancelled';
   notes?: string;
+  order?: number;
   createdAt: Date;
   updatedAt: Date;
 }
