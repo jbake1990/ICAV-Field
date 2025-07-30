@@ -61,71 +61,130 @@ async function handleGetAssignments(req, res, user) {
   try {
     const { startDate, endDate, userId } = req.query;
     
-    let query;
-    const queryParams = [];
+    let result;
     
     if (user.role === 'admin') {
       // Admins can see all assignments with optional filters
-      let whereClause = '';
-      if (startDate && endDate) {
-        whereClause += ' WHERE ja.assigned_date >= $1 AND ja.assigned_date <= $2';
-        queryParams.push(startDate, endDate);
+      if (startDate && endDate && userId) {
+        result = await sql`
+          SELECT 
+            ja.id,
+            ja.job_id,
+            ja.user_id,
+            ja.technician_name,
+            ja.assigned_date,
+            ja.assigned_hours,
+            ja.actual_hours,
+            ja.status,
+            ja.notes,
+            COALESCE(ja."order", 0) as "order",
+            ja.created_at,
+            ja.updated_at
+          FROM job_assignments ja
+          WHERE ja.assigned_date >= ${startDate} AND ja.assigned_date <= ${endDate}
+            AND ja.user_id = ${userId}
+          ORDER BY ja.assigned_date DESC, ja.created_at DESC
+        `;
+      } else if (startDate && endDate) {
+        result = await sql`
+          SELECT 
+            ja.id,
+            ja.job_id,
+            ja.user_id,
+            ja.technician_name,
+            ja.assigned_date,
+            ja.assigned_hours,
+            ja.actual_hours,
+            ja.status,
+            ja.notes,
+            COALESCE(ja."order", 0) as "order",
+            ja.created_at,
+            ja.updated_at
+          FROM job_assignments ja
+          WHERE ja.assigned_date >= ${startDate} AND ja.assigned_date <= ${endDate}
+          ORDER BY ja.assigned_date DESC, ja.created_at DESC
+        `;
+      } else if (userId) {
+        result = await sql`
+          SELECT 
+            ja.id,
+            ja.job_id,
+            ja.user_id,
+            ja.technician_name,
+            ja.assigned_date,
+            ja.assigned_hours,
+            ja.actual_hours,
+            ja.status,
+            ja.notes,
+            COALESCE(ja."order", 0) as "order",
+            ja.created_at,
+            ja.updated_at
+          FROM job_assignments ja
+          WHERE ja.user_id = ${userId}
+          ORDER BY ja.assigned_date DESC, ja.created_at DESC
+        `;
+      } else {
+        result = await sql`
+          SELECT 
+            ja.id,
+            ja.job_id,
+            ja.user_id,
+            ja.technician_name,
+            ja.assigned_date,
+            ja.assigned_hours,
+            ja.actual_hours,
+            ja.status,
+            ja.notes,
+            COALESCE(ja."order", 0) as "order",
+            ja.created_at,
+            ja.updated_at
+          FROM job_assignments ja
+          ORDER BY ja.assigned_date DESC, ja.created_at DESC
+        `;
       }
-      if (userId) {
-        whereClause += whereClause ? ' AND' : ' WHERE';
-        whereClause += ` ja.user_id = $${queryParams.length + 1}`;
-        queryParams.push(userId);
-      }
-      
-      query = `
-        SELECT 
-          ja.id,
-          ja.job_id,
-          ja.user_id,
-          ja.technician_name,
-          ja.assigned_date,
-          ja.assigned_hours,
-          ja.actual_hours,
-          ja.status,
-          ja.notes,
-          COALESCE(ja."order", 0) as "order",
-          ja.created_at,
-          ja.updated_at
-        FROM job_assignments ja
-        ${whereClause}
-        ORDER BY ja.assigned_date DESC, ja.created_at DESC
-      `;
     } else {
       // Regular users can only see their own assignments
-      let whereClause = ' WHERE ja.user_id = $1';
-      queryParams.push(user.user_id);
-      
       if (startDate && endDate) {
-        whereClause += ' AND ja.assigned_date >= $2 AND ja.assigned_date <= $3';
-        queryParams.push(startDate, endDate);
+        result = await sql`
+          SELECT 
+            ja.id,
+            ja.job_id,
+            ja.user_id,
+            ja.technician_name,
+            ja.assigned_date,
+            ja.assigned_hours,
+            ja.actual_hours,
+            ja.status,
+            ja.notes,
+            COALESCE(ja."order", 0) as "order",
+            ja.created_at,
+            ja.updated_at
+          FROM job_assignments ja
+          WHERE ja.user_id = ${user.user_id}
+            AND ja.assigned_date >= ${startDate} AND ja.assigned_date <= ${endDate}
+          ORDER BY ja.assigned_date DESC, ja.created_at DESC
+        `;
+      } else {
+        result = await sql`
+          SELECT 
+            ja.id,
+            ja.job_id,
+            ja.user_id,
+            ja.technician_name,
+            ja.assigned_date,
+            ja.assigned_hours,
+            ja.actual_hours,
+            ja.status,
+            ja.notes,
+            COALESCE(ja."order", 0) as "order",
+            ja.created_at,
+            ja.updated_at
+          FROM job_assignments ja
+          WHERE ja.user_id = ${user.user_id}
+          ORDER BY ja.assigned_date DESC, ja.created_at DESC
+        `;
       }
-      
-      query = `
-        SELECT 
-          ja.id,
-          ja.job_id,
-          ja.user_id,
-          ja.technician_name,
-          ja.assigned_date,
-          ja.assigned_hours,
-          ja.actual_hours,
-          ja.status,
-          ja.notes,
-          COALESCE(ja."order", 0) as "order",
-          ja.created_at,
-          ja.updated_at
-        FROM job_assignments ja
-        ${whereClause}
-        ORDER BY ja.assigned_date DESC, ja.created_at DESC
-      `;
     }
-    
-    const result = await sql.query(query, queryParams);
     
     // Convert database format to frontend format
     const formattedAssignments = result.rows.map(row => ({
