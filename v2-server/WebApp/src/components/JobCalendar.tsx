@@ -33,19 +33,15 @@ export default function JobCalendar({
   const [technicianOrder, setTechnicianOrder] = useState<string[]>([]);
   const [draggedTechnician, setDraggedTechnician] = useState<string | null>(null);
   const [newJob, setNewJob] = useState<{
-    title: string;
     customerName: string;
     description: string;
     location: string;
-    estimatedHours: number;
     priority: 'low' | 'medium' | 'high';
     status: JobStatus;
   }>({
-    title: '',
     customerName: '',
     description: '',
     location: '',
-    estimatedHours: 8,
     priority: 'medium',
     status: 'draft'
   });
@@ -277,7 +273,13 @@ export default function JobCalendar({
       console.log('JobCalendar - Creating job:', newJob);
       
       const jobData = {
-        ...newJob,
+        title: newJob.customerName, // Use customer name as title
+        customerName: newJob.customerName,
+        description: newJob.description,
+        location: newJob.location,
+        estimatedHours: 8, // Default to 8 hours
+        priority: newJob.priority,
+        status: newJob.status,
         createdBy: 'admin'
       };
       
@@ -286,11 +288,9 @@ export default function JobCalendar({
       
       // Reset form
       setNewJob({
-        title: '',
         customerName: '',
         description: '',
         location: '',
-        estimatedHours: 8,
         priority: 'medium',
         status: 'draft'
       });
@@ -349,13 +349,29 @@ export default function JobCalendar({
                   key={job.id}
                   draggable
                   onDragStart={(e) => handleDragStart(e, job, 'unassigned')}
-                  className="p-3 bg-white border border-gray-200 rounded-lg cursor-move hover:shadow-md transition-shadow"
+                  className={`p-3 border rounded-lg cursor-move hover:shadow-md transition-shadow ${
+                    job.priority === 'high' ? 'bg-red-50 border-red-200' :
+                    job.priority === 'medium' ? 'bg-yellow-50 border-yellow-200' :
+                    'bg-green-50 border-green-200'
+                  }`}
                 >
-                  <div className="font-medium text-sm">{job.title}</div>
-                  <div className="text-xs text-gray-600">{job.customerName}</div>
+                  <div className={`font-medium text-sm ${
+                    job.priority === 'high' ? 'text-red-900' :
+                    job.priority === 'medium' ? 'text-yellow-900' :
+                    'text-green-900'
+                  }`}>{job.title}</div>
+                  <div className={`text-xs ${
+                    job.priority === 'high' ? 'text-red-700' :
+                    job.priority === 'medium' ? 'text-yellow-700' :
+                    'text-green-700'
+                  }`}>{job.customerName}</div>
                   <div className="flex items-center justify-between mt-2">
                     <div className="text-xs">
-                      <span className="text-blue-600 font-medium">{remainingHours}h remaining</span>
+                      <span className={`font-medium ${
+                        job.priority === 'high' ? 'text-red-600' :
+                        job.priority === 'medium' ? 'text-yellow-600' :
+                        'text-green-600'
+                      }`}>{remainingHours}h remaining</span>
                       {assignedHours > 0 && (
                         <span className="text-gray-500 ml-1">({assignedHours}h assigned)</span>
                       )}
@@ -442,16 +458,32 @@ export default function JobCalendar({
                           if (!job) return null;
                           
                           return (
-                            <div
-                              key={assignment.id}
-                              draggable
-                              onDragStart={(e) => handleDragStart(e, job, 'calendar', assignment.id)}
-                              className="p-2 bg-blue-100 border border-blue-200 rounded text-xs cursor-move hover:bg-blue-200 transition-colors"
-                            >
-                              <div className="font-medium text-blue-900">{job.title}</div>
-                              <div className="text-blue-700">{job.customerName}</div>
-                              <div className="text-blue-600">{assignment.assignedHours}h</div>
-                            </div>
+                                                         <div
+                               key={assignment.id}
+                               draggable
+                               onDragStart={(e) => handleDragStart(e, job, 'calendar', assignment.id)}
+                               className={`p-2 border rounded text-xs cursor-move transition-colors ${
+                                 job.priority === 'high' ? 'bg-red-100 border-red-200 hover:bg-red-200' :
+                                 job.priority === 'medium' ? 'bg-yellow-100 border-yellow-200 hover:bg-yellow-200' :
+                                 'bg-green-100 border-green-200 hover:bg-green-200'
+                               }`}
+                             >
+                               <div className={`font-medium ${
+                                 job.priority === 'high' ? 'text-red-900' :
+                                 job.priority === 'medium' ? 'text-yellow-900' :
+                                 'text-green-900'
+                               }`}>{job.title}</div>
+                               <div className={`${
+                                 job.priority === 'high' ? 'text-red-700' :
+                                 job.priority === 'medium' ? 'text-yellow-700' :
+                                 'text-green-700'
+                               }`}>{job.customerName}</div>
+                               <div className={`${
+                                 job.priority === 'high' ? 'text-red-600' :
+                                 job.priority === 'medium' ? 'text-yellow-600' :
+                                 'text-green-600'
+                               }`}>{assignment.assignedHours}h</div>
+                             </div>
                           );
                         })}
                       </div>
@@ -488,19 +520,6 @@ export default function JobCalendar({
             </div>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Job Title
-                </label>
-                <input
-                  type="text"
-                  value={newJob.title}
-                  onChange={(e) => setNewJob({ ...newJob, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter job title"
-                />
-              </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Customer Name
@@ -540,35 +559,19 @@ export default function JobCalendar({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Estimated Hours
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    value={newJob.estimatedHours}
-                    onChange={(e) => setNewJob({ ...newJob, estimatedHours: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Priority
-                  </label>
-                  <select
-                    value={newJob.priority}
-                    onChange={(e) => setNewJob({ ...newJob, priority: e.target.value as 'low' | 'medium' | 'high' })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Priority
+                </label>
+                <select
+                  value={newJob.priority}
+                  onChange={(e) => setNewJob({ ...newJob, priority: e.target.value as 'low' | 'medium' | 'high' })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
               </div>
             </div>
 
@@ -581,7 +584,7 @@ export default function JobCalendar({
               </button>
               <button
                 onClick={handleCreateJob}
-                disabled={!newJob.title || !newJob.customerName}
+                disabled={!newJob.customerName}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Create Job
