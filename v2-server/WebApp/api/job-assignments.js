@@ -79,8 +79,19 @@ async function handleGetAssignments(req, res, user) {
             ja.notes,
             COALESCE(ja."order", 0) as "order",
             ja.created_at,
-            ja.updated_at
+            ja.updated_at,
+            j.id as job_id_full,
+            j.title as job_title,
+            j.customer_name as job_customer_name,
+            j.description as job_description,
+            j.location as job_location,
+            j.estimated_hours as job_estimated_hours,
+            j.status as job_status,
+            j.priority as job_priority,
+            j.created_at as job_created_at,
+            j.updated_at as job_updated_at
           FROM job_assignments ja
+          LEFT JOIN jobs j ON ja.job_id = j.id
           WHERE ja.assigned_date >= ${startDate} AND ja.assigned_date <= ${endDate}
             AND ja.user_id = ${userId}
           ORDER BY ja.assigned_date DESC, ja.created_at DESC
@@ -99,8 +110,19 @@ async function handleGetAssignments(req, res, user) {
             ja.notes,
             COALESCE(ja."order", 0) as "order",
             ja.created_at,
-            ja.updated_at
+            ja.updated_at,
+            j.id as job_id_full,
+            j.title as job_title,
+            j.customer_name as job_customer_name,
+            j.description as job_description,
+            j.location as job_location,
+            j.estimated_hours as job_estimated_hours,
+            j.status as job_status,
+            j.priority as job_priority,
+            j.created_at as job_created_at,
+            j.updated_at as job_updated_at
           FROM job_assignments ja
+          LEFT JOIN jobs j ON ja.job_id = j.id
           WHERE ja.assigned_date >= ${startDate} AND ja.assigned_date <= ${endDate}
           ORDER BY ja.assigned_date DESC, ja.created_at DESC
         `;
@@ -118,8 +140,19 @@ async function handleGetAssignments(req, res, user) {
             ja.notes,
             COALESCE(ja."order", 0) as "order",
             ja.created_at,
-            ja.updated_at
+            ja.updated_at,
+            j.id as job_id_full,
+            j.title as job_title,
+            j.customer_name as job_customer_name,
+            j.description as job_description,
+            j.location as job_location,
+            j.estimated_hours as job_estimated_hours,
+            j.status as job_status,
+            j.priority as job_priority,
+            j.created_at as job_created_at,
+            j.updated_at as job_updated_at
           FROM job_assignments ja
+          LEFT JOIN jobs j ON ja.job_id = j.id
           WHERE ja.user_id = ${userId}
           ORDER BY ja.assigned_date DESC, ja.created_at DESC
         `;
@@ -137,8 +170,19 @@ async function handleGetAssignments(req, res, user) {
             ja.notes,
             COALESCE(ja."order", 0) as "order",
             ja.created_at,
-            ja.updated_at
+            ja.updated_at,
+            j.id as job_id_full,
+            j.title as job_title,
+            j.customer_name as job_customer_name,
+            j.description as job_description,
+            j.location as job_location,
+            j.estimated_hours as job_estimated_hours,
+            j.status as job_status,
+            j.priority as job_priority,
+            j.created_at as job_created_at,
+            j.updated_at as job_updated_at
           FROM job_assignments ja
+          LEFT JOIN jobs j ON ja.job_id = j.id
           ORDER BY ja.assigned_date DESC, ja.created_at DESC
         `;
       }
@@ -158,8 +202,19 @@ async function handleGetAssignments(req, res, user) {
             ja.notes,
             COALESCE(ja."order", 0) as "order",
             ja.created_at,
-            ja.updated_at
+            ja.updated_at,
+            j.id as job_id_full,
+            j.title as job_title,
+            j.customer_name as job_customer_name,
+            j.description as job_description,
+            j.location as job_location,
+            j.estimated_hours as job_estimated_hours,
+            j.status as job_status,
+            j.priority as job_priority,
+            j.created_at as job_created_at,
+            j.updated_at as job_updated_at
           FROM job_assignments ja
+          LEFT JOIN jobs j ON ja.job_id = j.id
           WHERE ja.user_id = ${user.user_id}
             AND ja.assigned_date >= ${startDate} AND ja.assigned_date <= ${endDate}
           ORDER BY ja.assigned_date DESC, ja.created_at DESC
@@ -178,8 +233,19 @@ async function handleGetAssignments(req, res, user) {
             ja.notes,
             COALESCE(ja."order", 0) as "order",
             ja.created_at,
-            ja.updated_at
+            ja.updated_at,
+            j.id as job_id_full,
+            j.title as job_title,
+            j.customer_name as job_customer_name,
+            j.description as job_description,
+            j.location as job_location,
+            j.estimated_hours as job_estimated_hours,
+            j.status as job_status,
+            j.priority as job_priority,
+            j.created_at as job_created_at,
+            j.updated_at as job_updated_at
           FROM job_assignments ja
+          LEFT JOIN jobs j ON ja.job_id = j.id
           WHERE ja.user_id = ${user.user_id}
           ORDER BY ja.assigned_date DESC, ja.created_at DESC
         `;
@@ -199,7 +265,19 @@ async function handleGetAssignments(req, res, user) {
       notes: row.notes,
       order: row.order || 0,
       createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at)
+      updatedAt: new Date(row.updated_at),
+      job: row.job_id_full ? {
+        id: row.job_id_full,
+        title: row.job_title,
+        customerName: row.job_customer_name,
+        description: row.job_description,
+        location: row.job_location,
+        estimatedHours: parseFloat(row.job_estimated_hours),
+        status: row.job_status,
+        priority: row.job_priority,
+        createdAt: new Date(row.job_created_at),
+        updatedAt: new Date(row.job_updated_at)
+      } : null
     }));
 
     console.log('Successfully fetched', formattedAssignments.length, 'job assignments');
