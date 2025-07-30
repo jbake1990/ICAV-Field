@@ -372,11 +372,26 @@ function AppContent() {
     }
   };
 
-  const handleAssignJob = async (jobId: string, userId: string, date: Date, hours: number) => {
+  const handleAssignJob = async (jobId: string, userId: string, date: Date) => {
     try {
       const technician = users.find(u => u.id === userId);
       if (!technician) {
         throw new Error('Technician not found');
+      }
+
+      // Get the job to determine how many hours to assign
+      const job = jobs.find(j => j.id === jobId);
+      if (!job) {
+        throw new Error('Job not found');
+      }
+
+      // Get remaining hours for this job
+      const jobAssignments = assignments.filter(a => a.jobId === jobId);
+      const totalAssignedHours = jobAssignments.reduce((sum, a) => sum + a.assignedHours, 0);
+      const remainingHours = Math.max(0, job.estimatedHours - totalAssignedHours);
+
+      if (remainingHours <= 0) {
+        throw new Error('No remaining hours to assign for this job');
       }
 
       const newAssignment = await api.createJobAssignment({
@@ -384,7 +399,7 @@ function AppContent() {
         userId,
         technicianName: technician.displayName,
         assignedDate: date.toISOString().split('T')[0], // YYYY-MM-DD format
-        assignedHours: hours
+        assignedHours: remainingHours // Assign all remaining hours
       });
       
       const formattedAssignment: JobAssignment = {
