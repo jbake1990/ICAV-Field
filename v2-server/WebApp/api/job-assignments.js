@@ -88,7 +88,7 @@ async function handleGetAssignments(req, res, user) {
           ja.actual_hours,
           ja.status,
           ja.notes,
-          ja."order",
+          COALESCE(ja."order", 0) as "order",
           ja.created_at,
           ja.updated_at
         FROM job_assignments ja
@@ -116,7 +116,7 @@ async function handleGetAssignments(req, res, user) {
           ja.actual_hours,
           ja.status,
           ja.notes,
-          ja."order",
+          COALESCE(ja."order", 0) as "order",
           ja.created_at,
           ja.updated_at
         FROM job_assignments ja
@@ -138,7 +138,7 @@ async function handleGetAssignments(req, res, user) {
       actualHours: row.actual_hours ? parseFloat(row.actual_hours) : undefined,
       status: row.status,
       notes: row.notes,
-      order: row.order,
+      order: row.order || 0,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at)
     }));
@@ -306,6 +306,12 @@ async function handleUpdateAssignment(req, res, user) {
     }
     
     if (updates.order !== undefined && user.role === 'admin') {
+      // Try to add the order column if it doesn't exist
+      try {
+        await sql`ALTER TABLE job_assignments ADD COLUMN IF NOT EXISTS "order" INTEGER`;
+      } catch (error) {
+        console.log('Order column already exists or cannot be added:', error.message);
+      }
       updateFields.push(`"order" = $${updateFields.length + 1}`);
       values.push(updates.order);
     }
