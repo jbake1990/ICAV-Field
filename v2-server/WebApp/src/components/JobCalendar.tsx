@@ -614,10 +614,7 @@ export default function JobCalendar({
              </div>
            </div>
          </div>
-       )}
-     </div>
-   );
- }
+             )}
 
       {/* Create Job Modal */}
       {showCreateJob && (
