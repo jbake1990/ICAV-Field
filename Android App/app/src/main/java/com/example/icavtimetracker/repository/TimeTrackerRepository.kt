@@ -133,7 +133,9 @@ class TimeTrackerRepository {
                     lunchStartTime = timeEntry.lunchStartTime?.let { dateFormatter.format(it) },
                     lunchEndTime = timeEntry.lunchEndTime?.let { dateFormatter.format(it) },
                     driveStartTime = timeEntry.driveStartTime?.let { dateFormatter.format(it) },
-                    driveEndTime = timeEntry.driveEndTime?.let { dateFormatter.format(it) }
+                    driveEndTime = timeEntry.driveEndTime?.let { dateFormatter.format(it) },
+                    jobNotes = if (timeEntry.jobNotes.isNotEmpty()) timeEntry.jobNotes else null,
+                    aiSummary = if (timeEntry.aiSummary.isNotEmpty()) timeEntry.aiSummary else null
                 )
                 
                 Log.d("TimeTrackerRepository", "Creating time entry request: $request")
@@ -189,7 +191,9 @@ class TimeTrackerRepository {
                     lunchStartTime = timeEntry.lunchStartTime?.let { dateFormatter.format(it) },
                     lunchEndTime = timeEntry.lunchEndTime?.let { dateFormatter.format(it) },
                     driveStartTime = timeEntry.driveStartTime?.let { dateFormatter.format(it) },
-                    driveEndTime = timeEntry.driveEndTime?.let { dateFormatter.format(it) }
+                    driveEndTime = timeEntry.driveEndTime?.let { dateFormatter.format(it) },
+                    jobNotes = if (timeEntry.jobNotes.isNotEmpty()) timeEntry.jobNotes else null,
+                    aiSummary = if (timeEntry.aiSummary.isNotEmpty()) timeEntry.aiSummary else null
                 )
                 
                 val response = apiService.updateTimeEntry("Bearer $token", request)
