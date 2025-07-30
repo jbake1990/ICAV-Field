@@ -781,6 +781,11 @@ class TimeTrackerViewModel: ObservableObject {
             return
         }
         
+        guard let token = authManager.getCurrentToken() else {
+            print("❌ No auth token available")
+            return
+        }
+        
         do {
             print("📋 Loading job assignments for user: \(currentUser.id)")
             
@@ -792,6 +797,7 @@ class TimeTrackerViewModel: ObservableObject {
             let endDate = startDate
             
             let assignments = try await apiService.getJobAssignments(
+                token: token,
                 userId: currentUser.id,
                 startDate: startDate,
                 endDate: endDate

@@ -255,11 +255,7 @@ class APIService: ObservableObject {
     }
     
     // MARK: - Job Assignments
-    func getJobAssignments(userId: String? = nil, startDate: String? = nil, endDate: String? = nil) async throws -> [JobAssignment] {
-        guard let token = AuthManager.shared.getAuthToken() else {
-            throw APIError.unauthorized
-        }
-        
+    func getJobAssignments(token: String, userId: String? = nil, startDate: String? = nil, endDate: String? = nil) async throws -> [JobAssignment] {
         var urlComponents = URLComponents(string: "\(baseURL)/api/job-assignments")!
         var queryItems: [URLQueryItem] = []
         

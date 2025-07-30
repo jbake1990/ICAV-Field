@@ -427,6 +427,7 @@ function AppContent() {
       if (updates.actualHours !== undefined) updateData.actualHours = updates.actualHours;
       if (updates.status) updateData.status = updates.status;
       if (updates.notes) updateData.notes = updates.notes;
+      if (updates.order !== undefined) updateData.order = updates.order;
 
       const updatedAssignment = await api.updateJobAssignment(assignmentId, updateData);
       

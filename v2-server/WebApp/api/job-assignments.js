@@ -88,6 +88,7 @@ async function handleGetAssignments(req, res, user) {
           ja.actual_hours,
           ja.status,
           ja.notes,
+          ja."order",
           ja.created_at,
           ja.updated_at
         FROM job_assignments ja
@@ -115,6 +116,7 @@ async function handleGetAssignments(req, res, user) {
           ja.actual_hours,
           ja.status,
           ja.notes,
+          ja."order",
           ja.created_at,
           ja.updated_at
         FROM job_assignments ja
@@ -136,6 +138,7 @@ async function handleGetAssignments(req, res, user) {
       actualHours: row.actual_hours ? parseFloat(row.actual_hours) : undefined,
       status: row.status,
       notes: row.notes,
+      order: row.order,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at)
     }));
@@ -301,6 +304,11 @@ async function handleUpdateAssignment(req, res, user) {
       updateFields.push(`notes = $${updateFields.length + 1}`);
       values.push(updates.notes);
     }
+    
+    if (updates.order !== undefined && user.role === 'admin') {
+      updateFields.push(`"order" = $${updateFields.length + 1}`);
+      values.push(updates.order);
+    }
 
     if (updateFields.length === 0) {
       return res.status(400).json({ error: 'No valid fields to update' });
@@ -329,6 +337,7 @@ async function handleUpdateAssignment(req, res, user) {
       actualHours: updatedAssignment.actual_hours ? parseFloat(updatedAssignment.actual_hours) : undefined,
       status: updatedAssignment.status,
       notes: updatedAssignment.notes,
+      order: updatedAssignment.order,
       createdAt: new Date(updatedAssignment.created_at),
       updatedAt: new Date(updatedAssignment.updated_at)
     };
