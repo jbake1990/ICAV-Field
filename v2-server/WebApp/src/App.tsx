@@ -455,6 +455,18 @@ function AppContent() {
     }
   };
 
+  const handleDeleteJob = async (jobId: string) => {
+    try {
+      await api.deleteJob(jobId);
+      setJobs(prev => prev.filter(j => j.id !== jobId));
+      // Also remove any assignments for this job
+      setAssignments(prev => prev.filter(a => a.jobId !== jobId));
+    } catch (error) {
+      console.error('Failed to delete job:', error);
+      throw error;
+    }
+  };
+
   // Handle authentication loading
   if (authState.isLoading) {
     return (
@@ -669,15 +681,16 @@ function AppContent() {
         )}
 
         {currentView === 'calendar' && authState.user?.role === 'admin' && (
-          <JobCalendar
-            users={users}
-            jobs={jobs}
-            assignments={assignments}
-            onAssignJob={handleAssignJob}
-            onUpdateAssignment={handleUpdateAssignment}
-            onDeleteAssignment={handleDeleteAssignment}
-            onCreateJob={handleCreateJob}
-          />
+                          <JobCalendar
+                  users={users}
+                  jobs={jobs}
+                  assignments={assignments}
+                  onAssignJob={handleAssignJob}
+                  onUpdateAssignment={handleUpdateAssignment}
+                  onDeleteAssignment={handleDeleteAssignment}
+                  onCreateJob={handleCreateJob}
+                  onDeleteJob={handleDeleteJob}
+                />
         )}
 
         {currentView === 'reports' && (

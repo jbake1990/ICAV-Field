@@ -10,6 +10,7 @@ interface JobCalendarProps {
   onUpdateAssignment: (assignmentId: string, updates: Partial<JobAssignment>) => Promise<void>;
   onDeleteAssignment: (assignmentId: string) => Promise<void>;
   onCreateJob: (job: Omit<Job, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  onDeleteJob: (jobId: string) => Promise<void>;
 }
 
 interface DraggedJob {
@@ -25,11 +26,14 @@ export default function JobCalendar({
   onAssignJob, 
   onUpdateAssignment, 
   onDeleteAssignment,
-  onCreateJob 
+  onCreateJob,
+  onDeleteJob
 }: JobCalendarProps) {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [draggedJob, setDraggedJob] = useState<DraggedJob | null>(null);
   const [showCreateJob, setShowCreateJob] = useState(false);
+  const [showDeleteJob, setShowDeleteJob] = useState(false);
+  const [jobToDelete, setJobToDelete] = useState<Job | null>(null);
   const [technicianOrder, setTechnicianOrder] = useState<string[]>([]);
   const [draggedTechnician, setDraggedTechnician] = useState<string | null>(null);
   const [newJob, setNewJob] = useState<{
@@ -302,6 +306,32 @@ export default function JobCalendar({
     }
   };
 
+  // Handle job deletion
+  const handleDeleteJob = async () => {
+    if (!jobToDelete) return;
+    
+    try {
+      await onDeleteJob(jobToDelete.id);
+      setShowDeleteJob(false);
+      setJobToDelete(null);
+      console.log('JobCalendar - Job deleted successfully');
+    } catch (error) {
+      console.error('JobCalendar - Failed to delete job:', error);
+      alert('Failed to delete job: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
+  // Handle move job back to unassigned
+  const handleMoveToUnassigned = async (assignmentId: string) => {
+    try {
+      await onDeleteAssignment(assignmentId);
+      console.log('JobCalendar - Job moved back to unassigned');
+    } catch (error) {
+      console.error('JobCalendar - Failed to move job to unassigned:', error);
+      alert('Failed to move job to unassigned: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -347,42 +377,58 @@ export default function JobCalendar({
               return (
                 <div
                   key={job.id}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, job, 'unassigned')}
-                  className={`p-3 border rounded-lg cursor-move hover:shadow-md transition-shadow ${
+                  className={`p-3 border rounded-lg hover:shadow-md transition-shadow ${
                     job.priority === 'high' ? 'bg-red-50 border-red-200' :
                     job.priority === 'medium' ? 'bg-yellow-50 border-yellow-200' :
                     'bg-green-50 border-green-200'
                   }`}
                 >
-                  <div className={`font-medium text-sm ${
-                    job.priority === 'high' ? 'text-red-900' :
-                    job.priority === 'medium' ? 'text-yellow-900' :
-                    'text-green-900'
-                  }`}>{job.title}</div>
-                  <div className={`text-xs ${
-                    job.priority === 'high' ? 'text-red-700' :
-                    job.priority === 'medium' ? 'text-yellow-700' :
-                    'text-green-700'
-                  }`}>{job.customerName}</div>
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="text-xs">
-                      <span className={`font-medium ${
-                        job.priority === 'high' ? 'text-red-600' :
-                        job.priority === 'medium' ? 'text-yellow-600' :
-                        'text-green-600'
-                      }`}>{remainingHours}h remaining</span>
-                      {assignedHours > 0 && (
-                        <span className="text-gray-500 ml-1">({assignedHours}h assigned)</span>
-                      )}
+                  <div 
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, job, 'unassigned')}
+                    className="cursor-move"
+                  >
+                    <div className={`font-medium text-sm ${
+                      job.priority === 'high' ? 'text-red-900' :
+                      job.priority === 'medium' ? 'text-yellow-900' :
+                      'text-green-900'
+                    }`}>{job.title}</div>
+                    <div className={`text-xs ${
+                      job.priority === 'high' ? 'text-red-700' :
+                      job.priority === 'medium' ? 'text-yellow-700' :
+                      'text-green-700'
+                    }`}>{job.customerName}</div>
+                    <div className="flex items-center justify-between mt-2">
+                      <div className="text-xs">
+                        <span className={`font-medium ${
+                          job.priority === 'high' ? 'text-red-600' :
+                          job.priority === 'medium' ? 'text-yellow-600' :
+                          'text-green-600'
+                        }`}>{remainingHours}h remaining</span>
+                        {assignedHours > 0 && (
+                          <span className="text-gray-500 ml-1">({assignedHours}h assigned)</span>
+                        )}
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded ${
+                        job.priority === 'high' ? 'bg-red-100 text-red-700' :
+                        job.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-green-100 text-green-700'
+                      }`}>
+                        {job.priority}
+                      </span>
                     </div>
-                    <span className={`text-xs px-2 py-1 rounded ${
-                      job.priority === 'high' ? 'bg-red-100 text-red-700' :
-                      job.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-green-100 text-green-700'
-                    }`}>
-                      {job.priority}
-                    </span>
+                  </div>
+                  <div className="flex justify-end mt-2">
+                    <button
+                      onClick={() => {
+                        setJobToDelete(job);
+                        setShowDeleteJob(true);
+                      }}
+                      className="text-red-600 hover:text-red-800 text-xs px-2 py-1 rounded hover:bg-red-100 transition-colors"
+                      title="Delete job"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
                   </div>
                 </div>
               );
@@ -460,29 +506,42 @@ export default function JobCalendar({
                           return (
                                                          <div
                                key={assignment.id}
-                               draggable
-                               onDragStart={(e) => handleDragStart(e, job, 'calendar', assignment.id)}
-                               className={`p-2 border rounded text-xs cursor-move transition-colors ${
-                                 job.priority === 'high' ? 'bg-red-100 border-red-200 hover:bg-red-200' :
-                                 job.priority === 'medium' ? 'bg-yellow-100 border-yellow-200 hover:bg-yellow-200' :
-                                 'bg-green-100 border-green-200 hover:bg-green-200'
+                               className={`p-2 border rounded text-xs transition-colors ${
+                                 job.priority === 'high' ? 'bg-red-100 border-red-200' :
+                                 job.priority === 'medium' ? 'bg-yellow-100 border-yellow-200' :
+                                 'bg-green-100 border-green-200'
                                }`}
                              >
-                               <div className={`font-medium ${
-                                 job.priority === 'high' ? 'text-red-900' :
-                                 job.priority === 'medium' ? 'text-yellow-900' :
-                                 'text-green-900'
-                               }`}>{job.title}</div>
-                               <div className={`${
-                                 job.priority === 'high' ? 'text-red-700' :
-                                 job.priority === 'medium' ? 'text-yellow-700' :
-                                 'text-green-700'
-                               }`}>{job.customerName}</div>
-                               <div className={`${
-                                 job.priority === 'high' ? 'text-red-600' :
-                                 job.priority === 'medium' ? 'text-yellow-600' :
-                                 'text-green-600'
-                               }`}>{assignment.assignedHours}h</div>
+                               <div 
+                                 draggable
+                                 onDragStart={(e) => handleDragStart(e, job, 'calendar', assignment.id)}
+                                 className="cursor-move"
+                               >
+                                 <div className={`font-medium ${
+                                   job.priority === 'high' ? 'text-red-900' :
+                                   job.priority === 'medium' ? 'text-yellow-900' :
+                                   'text-green-900'
+                                 }`}>{job.title}</div>
+                                 <div className={`${
+                                   job.priority === 'high' ? 'text-red-700' :
+                                   job.priority === 'medium' ? 'text-yellow-700' :
+                                   'text-green-700'
+                                 }`}>{job.customerName}</div>
+                                 <div className={`${
+                                   job.priority === 'high' ? 'text-red-600' :
+                                   job.priority === 'medium' ? 'text-yellow-600' :
+                                   'text-green-600'
+                                 }`}>{assignment.assignedHours}h</div>
+                               </div>
+                               <div className="flex justify-end mt-1">
+                                 <button
+                                   onClick={() => handleMoveToUnassigned(assignment.id)}
+                                   className="text-blue-600 hover:text-blue-800 text-xs px-1 py-0.5 rounded hover:bg-blue-100 transition-colors"
+                                   title="Move back to unassigned"
+                                 >
+                                   <X className="w-2.5 h-2.5" />
+                                 </button>
+                               </div>
                              </div>
                           );
                         })}
@@ -494,16 +553,71 @@ export default function JobCalendar({
                           <div className="text-xs text-gray-600">
                             Total: {totalHours}h
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-      </div>
+                                                         </div>
+                       )}
+                     </div>
+                   );
+                 })}
+               </React.Fragment>
+             ))}
+           </div>
+         </div>
+       </div>
+
+       {/* Delete Job Confirmation Modal */}
+       {showDeleteJob && jobToDelete && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+           <div className="bg-white rounded-lg p-6 w-full max-w-md">
+             <div className="flex items-center justify-between mb-4">
+               <h3 className="text-lg font-semibold text-red-600">Delete Job</h3>
+               <button
+                 onClick={() => {
+                   setShowDeleteJob(false);
+                   setJobToDelete(null);
+                 }}
+                 className="text-gray-400 hover:text-gray-600"
+               >
+                 <X className="w-5 h-5" />
+               </button>
+             </div>
+
+             <div className="mb-6">
+               <p className="text-gray-700 mb-2">
+                 Are you sure you want to delete this job?
+               </p>
+               <div className="bg-gray-50 p-3 rounded border">
+                 <div className="font-medium text-gray-900">{jobToDelete.title}</div>
+                 <div className="text-sm text-gray-600">{jobToDelete.customerName}</div>
+                 <div className="text-sm text-gray-600">{jobToDelete.location}</div>
+               </div>
+               <p className="text-sm text-red-600 mt-2">
+                 This action cannot be undone. All assignments for this job will also be deleted.
+               </p>
+             </div>
+
+             <div className="flex space-x-3">
+               <button
+                 onClick={() => {
+                   setShowDeleteJob(false);
+                   setJobToDelete(null);
+                 }}
+                 className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+               >
+                 Cancel
+               </button>
+               <button
+                 onClick={handleDeleteJob}
+                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+               >
+                 Delete Job
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
+     </div>
+   );
+ }
 
       {/* Create Job Modal */}
       {showCreateJob && (
