@@ -28,27 +28,34 @@ module.exports = async function handler(req, res) {
     
     console.log('Total time entries:', totalEntries);
     
-    // Get sample data (first entry)
-    let sampleData;
-    if (hasJobNotes && hasAiSummary) {
-      sampleData = await sql`
-        SELECT id, customer_name, technician_name, job_notes, ai_summary,
-               clock_in_time, clock_out_time
-        FROM time_entries 
-        ORDER BY clock_in_time DESC 
-        LIMIT 1
-      `;
-    } else {
-      sampleData = await sql`
-        SELECT id, customer_name, technician_name,
-               clock_in_time, clock_out_time
-        FROM time_entries 
-        ORDER BY clock_in_time DESC 
-        LIMIT 1
-      `;
+    // Get basic sample data first
+    const basicData = await sql`
+      SELECT id, customer_name, technician_name, clock_in_time, clock_out_time
+      FROM time_entries 
+      ORDER BY clock_in_time DESC 
+      LIMIT 1
+    `;
+    
+    let sampleEntry = basicData.rows[0] || null;
+    
+    // If we have AI columns and an entry, try to get those fields separately
+    if (sampleEntry && hasJobNotes && hasAiSummary) {
+      try {
+        const aiData = await sql`
+          SELECT job_notes, ai_summary
+          FROM time_entries 
+          WHERE id = ${sampleEntry.id}
+        `;
+        if (aiData.rows[0]) {
+          sampleEntry.job_notes = aiData.rows[0].job_notes;
+          sampleEntry.ai_summary = aiData.rows[0].ai_summary;
+        }
+      } catch (aiError) {
+        console.log('Could not fetch AI data:', aiError.message);
+      }
     }
     
-    console.log('Sample entry:', sampleData.rows[0]);
+    console.log('Sample entry:', sampleEntry);
     
     return res.status(200).json({
       status: 'success',
@@ -61,7 +68,7 @@ module.exports = async function handler(req, res) {
       },
       data: {
         totalEntries,
-        sampleEntry: sampleData.rows[0] || null
+        sampleEntry
       }
     });
     
