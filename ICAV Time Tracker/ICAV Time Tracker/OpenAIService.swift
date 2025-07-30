@@ -3,9 +3,8 @@ import Foundation
 @MainActor
 class OpenAIService: ObservableObject {
     
-    // Note: In production, this should be loaded from a secure configuration
-    // For now, you'll need to set your OpenAI API key here
-    private let apiKey = "YOUR_OPENAI_API_KEY_HERE"
+    // API key loaded from secure Config file (not committed to git)
+    private let apiKey = Config.openAIAPIKey
     private let baseURL = "https://api.openai.com/v1/chat/completions"
     
     @Published var isLoading = false

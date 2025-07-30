@@ -1,0 +1,15 @@
+package com.example.icavtimetracker
+
+/**
+ * Configuration template for sensitive data
+ * 
+ * Instructions:
+ * 1. Copy this file to Config.kt (remove .template extension)
+ * 2. Replace YOUR_OPENAI_API_KEY_HERE with your actual OpenAI API key
+ * 3. Update SERVER_URL if using a different server endpoint
+ * 4. Never commit the Config.kt file (it's in .gitignore)
+ */
+object Config {
+    const val OPENAI_API_KEY = "YOUR_OPENAI_API_KEY_HERE"
+    const val SERVER_URL = "https://icav-field.vercel.app/"
+}

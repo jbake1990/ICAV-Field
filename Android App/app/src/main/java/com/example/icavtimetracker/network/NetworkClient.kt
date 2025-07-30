@@ -11,7 +11,7 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 object NetworkClient {
-    private const val BASE_URL = "https://icav-feild.vercel.app/"
+    private const val BASE_URL = "https://icav-field.vercel.app/"
     
     private val gson = GsonBuilder()
         .registerTypeAdapter(Date::class.java, DateDeserializer())
@@ -19,11 +19,18 @@ object NetworkClient {
         .create()
     
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BASIC
+        level = HttpLoggingInterceptor.Level.BODY
     }
     
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
+        .addInterceptor { chain ->
+            val originalRequest = chain.request()
+            val newRequest = originalRequest.newBuilder()
+                .header("User-Agent", "ICAV-Time-Tracker-Android/1.0")
+                .build()
+            chain.proceed(newRequest)
+        }
         .connectTimeout(60, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)

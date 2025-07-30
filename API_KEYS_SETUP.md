@@ -10,28 +10,34 @@ To enable AI summarization features in the mobile apps, you need to configure yo
 4. Create a new API key
 5. Copy the key (you won't be able to see it again)
 
-## Setting Up API Keys
+## Setting Up API Keys (Secure Method)
+
+🔒 **API keys are now stored in secure config files that are NOT committed to git.**
 
 ### iOS App
-1. Open `ICAV Time Tracker/ICAV Time Tracker/OpenAIService.swift`
-2. Find the line: `private let apiKey = "YOUR_OPENAI_API_KEY_HERE"`
+1. Copy the template: `cp "ICAV Time Tracker/ICAV Time Tracker/Config.swift.template" "ICAV Time Tracker/ICAV Time Tracker/Config.swift"`
+2. Open the new `Config.swift` file
 3. Replace `YOUR_OPENAI_API_KEY_HERE` with your actual API key
-4. Example: `private let apiKey = "sk-proj-abcd1234..."`
+4. Example: `static let openAIAPIKey = "sk-proj-abcd1234..."`
 
 ### Android App
-1. Open `Android App/app/src/main/java/com/example/icavtimetracker/OpenAIService.kt`
-2. Find the line: `private val apiKey = "YOUR_OPENAI_API_KEY_HERE"`
+1. Copy the template: `cp "Android App/app/src/main/java/com/example/icavtimetracker/Config.kt.template" "Android App/app/src/main/java/com/example/icavtimetracker/Config.kt"`
+2. Open the new `Config.kt` file
 3. Replace `YOUR_OPENAI_API_KEY_HERE` with your actual API key
-4. Example: `private val apiKey = "sk-proj-abcd1234..."`
+4. Example: `const val OPENAI_API_KEY = "sk-proj-abcd1234..."`
 
 ## Security Note
 
-⚠️ **Important**: In production applications, API keys should be stored securely using:
-- iOS: Keychain Services
+✅ **Secure Implementation**: API keys are now properly secured using:
+- **Separate config files** that are not committed to version control
+- **Template system** for easy developer onboarding
+- **.gitignore protection** to prevent accidental commits
+- **Runtime loading** with no hardcoded secrets
+
+For even greater security in production, consider:
+- iOS: Keychain Services for local storage
 - Android: Encrypted SharedPreferences or Android Keystore
 - Server-side proxy: Make API calls from your backend instead of mobile apps
-
-For development and testing, the current approach is acceptable, but consider implementing proper security before production deployment.
 
 ## API Usage and Costs
 

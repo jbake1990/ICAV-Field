@@ -15,9 +15,8 @@ import java.io.IOException
 
 class OpenAIService {
     
-    // Note: In production, this should be loaded from a secure configuration
-    // For now, you'll need to set your OpenAI API key here
-    private val apiKey = "YOUR_OPENAI_API_KEY_HERE"
+    // API key loaded from secure Config file (not committed to git)
+    private val apiKey = Config.OPENAI_API_KEY
     private val baseUrl = "https://api.openai.com/v1/chat/completions"
     
     private val _isLoading = MutableStateFlow(false)

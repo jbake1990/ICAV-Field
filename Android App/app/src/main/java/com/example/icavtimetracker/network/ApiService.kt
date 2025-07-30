@@ -75,7 +75,9 @@ data class TimeEntryRequest(
     val lunchStartTime: String? = null,
     val lunchEndTime: String? = null,
     val driveStartTime: String? = null,
-    val driveEndTime: String? = null
+    val driveEndTime: String? = null,
+    val jobNotes: String? = null,
+    val aiSummary: String? = null
 )
 
 data class TimeEntryResponse(
@@ -88,7 +90,9 @@ data class TimeEntryResponse(
     val lunchStartTime: String?,
     val lunchEndTime: String?,
     val driveStartTime: String?,
-    val driveEndTime: String?
+    val driveEndTime: String?,
+    val jobNotes: String? = "",
+    val aiSummary: String? = ""
 )
 
 data class HealthResponse(

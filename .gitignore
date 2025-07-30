@@ -53,3 +53,10 @@ coverage/
 # Vercel
 .vercel 
 .vercel
+
+# API Keys and Sensitive Configuration
+**/Config.swift
+**/Config.kt
+ICAV\ Time\ Tracker/ICAV\ Time\ Tracker/Config.swift
+Android\ App/app/src/main/java/com/example/icavtimetracker/Config.kt
+OpenAI\ Key.rtf

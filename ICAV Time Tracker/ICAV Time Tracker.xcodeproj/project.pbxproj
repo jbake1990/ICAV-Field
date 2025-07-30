@@ -29,22 +29,9 @@
 		E2BF6A812E09F514000F36B9 /* ICAV Time TrackerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ICAV Time TrackerUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		E21325A02E38170C008546E5 /* Exceptions for "ICAV Time Tracker" folder in "ICAV Time Tracker" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"ICAV-Time-Tracker-Info.plist",
-			);
-			target = E2BF6A692E09F513000F36B9 /* ICAV Time Tracker */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		E2BF6A6C2E09F513000F36B9 /* ICAV Time Tracker */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				E21325A02E38170C008546E5 /* Exceptions for "ICAV Time Tracker" folder in "ICAV Time Tracker" target */,
-			);
 			path = "ICAV Time Tracker";
 			sourceTree = "<group>";
 		};
@@ -414,6 +401,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "ICAV-Time-Tracker-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "ICAV Field App";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "his app needs access to the microphone to record your voice for job notes.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "This app uses speech recognition to convert your voice to text for job notes.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -426,7 +415,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "Baker.ICAV-Time-Tracker";
+				PRODUCT_BUNDLE_IDENTIFIER = "Baker.ICAV-Field-App";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -445,6 +434,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "ICAV-Time-Tracker-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "ICAV Field App";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.business";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "his app needs access to the microphone to record your voice for job notes.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "This app uses speech recognition to convert your voice to text for job notes.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -457,7 +448,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "Baker.ICAV-Time-Tracker";
+				PRODUCT_BUNDLE_IDENTIFIER = "Baker.ICAV-Field-App";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;

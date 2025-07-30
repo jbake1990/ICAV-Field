@@ -81,7 +81,7 @@ class APIService: ObservableObject {
     static let shared = APIService()
     
     // Updated to use the working deployment URL
-    private let baseURL = "https://icav-feild.vercel.app"
+    private let baseURL = "https://icav-field.vercel.app"
     
     @Published var isOnline = true
     @Published var lastSyncDate: Date?

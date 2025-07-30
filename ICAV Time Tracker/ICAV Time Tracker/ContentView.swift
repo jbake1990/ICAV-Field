@@ -906,13 +906,9 @@ struct JobNotesModal: View {
             .padding()
             .navigationBarHidden(true)
             .onChange(of: speechManager.recognizedText) { oldValue, newText in
-                if !newText.isEmpty {
-                    // Append recognized text to existing notes
-                    if jobNotesText.isEmpty {
-                        jobNotesText = newText
-                    } else {
-                        jobNotesText += " " + newText
-                    }
+                if !newText.isEmpty && speechManager.isRecording {
+                    // During recording, replace with new recognition (don't append partial results)
+                    jobNotesText = newText
                 }
             }
             .onChange(of: speechManager.isRecording) { oldValue, recording in
