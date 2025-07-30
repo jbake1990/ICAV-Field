@@ -318,7 +318,7 @@ struct ContentView: View {
             // Jobs List with New Job button
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text("Scheduled Jobs")
+                    Text("Today's Jobs")
                         .font(.headline)
                     Spacer()
                     Button(action: { 
@@ -333,62 +333,32 @@ struct ContentView: View {
                 }
                 .padding(.horizontal)
                 
-                // Show scheduled job assignments first
-                if !jobAssignments.isEmpty {
-                    ScrollView {
-                        LazyVStack(spacing: 8) {
-                            ForEach(jobAssignments) { assignment in
-                                if let job = assignment.job {
-                                    Button(action: {
-                                        viewModel.selectJobAssignment(assignment)
-                                    }) {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(job.customerName)
-                                                .font(.headline)
-                                                .foregroundColor(.primary)
-                                            if let location = job.location, !location.isEmpty {
-                                                Text(location)
-                                                    .font(.caption)
-                                                    .foregroundColor(.secondary)
-                                            }
-                                            HStack {
-                                                Text("\(assignment.assignedHours)h")
-                                                    .font(.caption)
-                                                    .foregroundColor(.blue)
-                                                Spacer()
-                                                Text("Scheduled")
-                                                    .font(.caption)
-                                                    .foregroundColor(.secondary)
-                                            }
-                                        }
-                                        .padding()
-                                        .background(Color(.systemGray6))
-                                        .cornerRadius(8)
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                    .frame(maxHeight: 150)
-                    
-                    Divider()
-                        .padding(.horizontal)
-                }
-                
-                // Show existing time entries
+                // Show all jobs in a single list
                 if !jobs.isEmpty {
-                    Text("Active Jobs")
-                        .font(.subheadline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal)
-                    
                     List(jobs) { job in
                         HStack {
-                            Text(job.customerName)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(job.customerName)
+                                    .font(.headline)
+                                
+                                // Show if it's a scheduled job
+                                if job.jobAssignmentId != nil {
+                                    HStack {
+                                        Text("Scheduled")
+                                            .font(.caption)
+                                            .foregroundColor(.blue)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(Color.blue.opacity(0.1))
+                                            .cornerRadius(4)
+                                        
+                                        Spacer()
+                                    }
+                                }
+                            }
+                            
                             Spacer()
+                            
                             if selectedJob?.id == job.id {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(.blue)
@@ -400,7 +370,12 @@ struct ContentView: View {
                         }
                     }
                     .listStyle(PlainListStyle())
-                    .frame(maxHeight: 200)
+                    .frame(maxHeight: 300)
+                } else {
+                    Text("No jobs for today")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .padding()
                 }
             }
             .frame(maxHeight: 350)

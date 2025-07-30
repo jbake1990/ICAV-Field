@@ -382,7 +382,7 @@ fun MainScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Scheduled Jobs",
+                    text = "Today's Jobs",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -398,92 +398,86 @@ fun MainScreen(
             
             Spacer(modifier = Modifier.height(8.dp))
             
-            // Show scheduled job assignments first
-            if (jobAssignments.isNotEmpty()) {
+            // Show all jobs in a single list
+            if (todayJobs.isNotEmpty()) {
                 LazyColumn(
-                    modifier = Modifier.heightIn(max = 150.dp),
+                    modifier = Modifier.heightIn(max = 300.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(jobAssignments) { assignment ->
-                        val job = assignment.job
-                        if (job != null) {
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { 
-                                        viewModel.selectJobAssignment(assignment)
-                                    },
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (selectedJobAssignment?.id == assignment.id) 
-                                        MaterialTheme.colorScheme.primaryContainer 
-                                    else 
-                                        MaterialTheme.colorScheme.surfaceVariant
-                                )
+                    items(todayJobs) { job ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedJob = job },
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (selectedJob?.id == job.id) 
+                                    MaterialTheme.colorScheme.primaryContainer 
+                                else 
+                                    MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp)
                             ) {
-                                Column(
-                                    modifier = Modifier.padding(12.dp)
-                                ) {
-                                    Text(
-                                        text = job.customerName,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    if (!job.location.isNullOrBlank()) {
-                                        Text(
-                                            text = job.location,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                                Text(
+                                    text = job.customerName,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                
+                                // Show if it's a scheduled job
+                                if (job.jobAssignmentId != null) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = "${assignment.assignedHours}h",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                        Text(
                                             text = "Scheduled",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.secondary
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier
+                                                .background(
+                                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                                    RoundedCornerShape(4.dp)
+                                                )
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
+                                        
+                                        if (selectedJob?.id == job.id) {
+                                            Icon(
+                                                Icons.Default.Check,
+                                                contentDescription = "Selected",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.End,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        if (selectedJob?.id == job.id) {
+                                            Icon(
+                                                Icons.Default.Check,
+                                                contentDescription = "Selected",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                Divider()
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-            
-            // Show existing time entries
-            if (todayJobs.isNotEmpty()) {
+            } else {
                 Text(
-                    text = "Active Jobs",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = "No jobs for today",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(16.dp)
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                LazyColumn(
-                    modifier = Modifier.heightIn(max = 200.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(todayJobs) { job ->
-                        JobListItem(
-                            job = job,
-                            isSelected = selectedJob?.id == job.id,
-                            onClick = { selectedJob = job }
-                        )
-                    }
-                }
             }
         }
     }

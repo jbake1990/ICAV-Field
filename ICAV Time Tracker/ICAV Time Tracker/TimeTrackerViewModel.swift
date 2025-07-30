@@ -806,6 +806,9 @@ class TimeTrackerViewModel: ObservableObject {
             print("✅ Successfully loaded \(assignments.count) job assignments")
             await MainActor.run {
                 self.jobAssignments = assignments
+                
+                // Automatically create time entries from job assignments
+                self.createTimeEntriesFromAssignments(assignments)
             }
         } catch {
             print("❌ Failed to load job assignments: \(error)")
@@ -813,6 +816,47 @@ class TimeTrackerViewModel: ObservableObject {
                 showAlert("Failed to load job assignments: \(error.localizedDescription)")
             }
         }
+    }
+    
+    private func createTimeEntriesFromAssignments(_ assignments: [JobAssignment]) {
+        guard let currentUser = authManager.currentUser else {
+            print("❌ No current user available")
+            return
+        }
+        
+        for assignment in assignments {
+            guard let job = assignment.job else {
+                print("❌ No job data available for assignment")
+                continue
+            }
+            
+            // Check if we already have a time entry for this job assignment
+            let existingEntry = timeEntries.first { entry in
+                entry.jobAssignmentId == assignment.id
+            }
+            
+            if existingEntry == nil {
+                print("📋 Creating time entry for scheduled job: \(job.customerName)")
+                
+                // Create a new time entry for this job assignment
+                var newEntry = TimeEntry(
+                    userId: currentUser.id,
+                    technicianName: currentUser.displayName,
+                    customerName: job.customerName,
+                    jobAssignmentId: assignment.id // Link to the job assignment
+                )
+                
+                // Mark for sync
+                newEntry.markForSync()
+                timeEntries.append(newEntry)
+                
+                print("✅ Created time entry for job assignment: \(newEntry.id)")
+            } else {
+                print("📋 Time entry already exists for job: \(job.customerName)")
+            }
+        }
+        
+        saveData()
     }
     
     func selectJobAssignment(_ assignment: JobAssignment) {
