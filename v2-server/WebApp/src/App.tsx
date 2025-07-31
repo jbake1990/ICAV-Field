@@ -372,6 +372,8 @@ function AppContent() {
     }
     
     try {
+      console.log('Starting cleanup process...');
+      
       const response = await fetch('/api/cleanup-entries', {
         method: 'POST',
         headers: {
@@ -380,21 +382,56 @@ function AppContent() {
         }
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Cleanup failed');
+      console.log('Cleanup response status:', response.status);
+      console.log('Cleanup response headers:', response.headers);
+      
+      const responseText = await response.text();
+      console.log('Cleanup response text:', responseText);
+      
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse cleanup response:', parseError);
+        throw new Error(`Invalid response from server: ${responseText}`);
       }
       
-      const result = await response.json();
-      console.log('Cleanup completed:', result);
+      if (!response.ok) {
+        console.error('Cleanup failed with status:', response.status);
+        console.error('Cleanup error response:', result);
+        throw new Error(result.error || result.details || 'Cleanup failed');
+      }
+      
+      console.log('Cleanup completed successfully:', result);
       
       // Refresh data after cleanup
+      console.log('Refreshing data after cleanup...');
       await loadData();
+      console.log('Data refresh completed');
       
       alert(`Cleanup completed successfully!\n\nDeleted: ${result.deletedCount} entries\nUpdated: ${result.updatedCount} entries\n\nFound:\n- ${result.invalidEntriesFound} invalid entries\n- ${result.oldEntriesFound} old entries\n- ${result.duplicateEntriesFound} duplicate entries`);
     } catch (error) {
       console.error('Failed to cleanup entries:', error);
-      alert(`Failed to cleanup entries: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace'
+      });
+      
+      // Show more detailed error message
+      let errorMessage = 'Failed to cleanup entries. ';
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (errorMsg.includes('401')) {
+        errorMessage += 'Please log in again.';
+      } else if (errorMsg.includes('403')) {
+        errorMessage += 'You are not authorized to run cleanup.';
+      } else if (errorMsg.includes('500')) {
+        errorMessage += 'Server error occurred.';
+      } else {
+        errorMessage += errorMsg;
+      }
+      
+      alert(errorMessage);
     }
   };
 

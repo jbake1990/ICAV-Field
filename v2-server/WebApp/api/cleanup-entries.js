@@ -147,7 +147,7 @@ module.exports = async function handler(req, res) {
     
     console.log('Cleanup completed successfully');
     
-    return res.status(200).json({
+    const responseData = {
       message: 'Cleanup completed successfully',
       deletedCount: deletedCount,
       updatedCount: updatedCount,
@@ -156,14 +156,28 @@ module.exports = async function handler(req, res) {
       duplicateEntriesFound: duplicateEntries.length,
       summary: summary[0],
       timestamp: new Date().toISOString()
-    });
+    };
+    
+    console.log('Sending response:', responseData);
+    
+    return res.status(200).json(responseData);
     
   } catch (error) {
-    console.error('Cleanup error:', error);
-    return res.status(500).json({
+    console.error('=== CLEANUP ERROR DEBUG ===');
+    console.error('Error type:', typeof error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', error);
+    console.error('=== END CLEANUP ERROR DEBUG ===');
+    
+    const errorResponse = {
       error: 'Cleanup failed',
       details: error.message,
       timestamp: new Date().toISOString()
-    });
+    };
+    
+    console.log('Sending error response:', errorResponse);
+    
+    return res.status(500).json(errorResponse);
   }
 }; 
