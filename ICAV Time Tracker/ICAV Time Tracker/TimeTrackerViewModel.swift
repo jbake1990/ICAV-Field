@@ -64,7 +64,7 @@ class TimeTrackerViewModel: ObservableObject {
             await syncEntry(entry)
         }
         
-        // Refresh data from server
+        // Refresh data from server (includes job assignments)
         await performSync()
         
         print("✅ Periodic sync completed")
@@ -468,6 +468,9 @@ class TimeTrackerViewModel: ObservableObject {
         // Then, fetch any new entries from server
         print("📥 Fetching entries from server...")
         await fetchServerEntries(token: token)
+        // Refresh job assignments from server
+        print("📋 Refreshing job assignments...")
+        await loadJobAssignments()
         // After fetching, filter to only today's entries
         await MainActor.run {
             self.filterToToday()
