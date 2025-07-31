@@ -786,7 +786,8 @@ class TimeTrackerViewModel(application: Application) : AndroidViewModel(applicat
                         userId = currentUser.id,
                         technicianName = currentUser.displayName,
                         customerName = job.customerName,
-                        jobAssignmentId = assignment.id // Link to the job assignment
+                        jobAssignmentId = assignment.id, // Link to the job assignment
+                        jobId = job.id // Link to the actual job
                     )
                     
                     // Mark for sync

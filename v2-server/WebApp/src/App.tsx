@@ -8,7 +8,7 @@ import TimeEntryCard from './components/TimeEntryCard';
 import { LoginForm } from './components/LoginForm';
 import Reports from './components/Reports';
 import JobCalendar from './components/JobCalendar';
-import JobNotesView from './components/JobNotesView';
+import JobNotesModal from './components/JobNotesModal';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { formatDate, formatTime } from './utils/timeUtils';
 
@@ -26,7 +26,7 @@ function AppContent() {
   const [showSettings, setShowSettings] = useState(false);
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [showReports, setShowReports] = useState(false);
-  const [showJobNotes, setShowJobNotes] = useState(false);
+  const [selectedEntryForNotes, setSelectedEntryForNotes] = useState<TimeEntry | null>(null);
   const [newUser, setNewUser] = useState({ username: '', displayName: '', password: '', role: 'tech' });
   const [creatingUser, setCreatingUser] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
@@ -623,13 +623,7 @@ function AppContent() {
                   <span>Reports</span>
                 </button>
                 
-                <button
-                  onClick={() => setShowJobNotes(true)}
-                  className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
-                >
-                  <Brain className="w-4 h-4" />
-                  <span>Job Notes</span>
-                </button>
+
               </div>
 
               {/* Admin-only features */}
@@ -705,7 +699,7 @@ function AppContent() {
                       <TimeEntryCard
                         key={entry.id}
                         entry={entry}
-                        onClick={() => setSelectedEntry(entry)}
+                        onClick={() => setSelectedEntryForNotes(entry)}
                         onDelete={handleDeleteEntry}
                         isDeleting={deletingEntry === entry.id}
                       />
@@ -750,10 +744,10 @@ function AppContent() {
           />
         )}
 
-        {showJobNotes && (
-          <JobNotesView
-            timeEntries={timeEntries}
-            onClose={() => setShowJobNotes(false)}
+        {selectedEntryForNotes && (
+          <JobNotesModal
+            entry={selectedEntryForNotes}
+            onClose={() => setSelectedEntryForNotes(null)}
           />
         )}
       </main>

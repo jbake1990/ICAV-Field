@@ -26,6 +26,8 @@ export interface ApiTimeEntry {
   userId: string;
   technicianName: string;
   customerName: string;
+  jobId?: string;
+  jobAssignmentId?: string;
   clockInTime: string;
   clockOutTime?: string;
   lunchStartTime?: string;

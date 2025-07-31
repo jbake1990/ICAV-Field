@@ -857,7 +857,8 @@ class TimeTrackerViewModel: ObservableObject {
                 userId: currentUser.id,
                 technicianName: currentUser.displayName,
                 customerName: job.customerName,
-                jobAssignmentId: assignment.id // Link to the job assignment
+                jobAssignmentId: assignment.id, // Link to the job assignment
+                jobId: job.id // Link to the actual job
             )
             
             // Mark for sync
@@ -896,7 +897,8 @@ class TimeTrackerViewModel: ObservableObject {
             userId: currentUser.id,
             technicianName: currentUser.displayName,
             customerName: job.customerName,
-            jobAssignmentId: assignment.id // Link to the job assignment
+            jobAssignmentId: assignment.id, // Link to the job assignment
+            jobId: job.id // Link to the actual job
         )
         
         // Add to local entries
