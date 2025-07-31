@@ -32,7 +32,7 @@ module.exports = async function handler(req, res) {
     const today = new Date().toISOString().split('T')[0];
     console.log('Today\'s date:', today);
 
-    // Test filtering by today's date
+    // Test filtering by today's date with different comparison methods
     const todayAssignments = await sql`
       SELECT 
         ja.id,
@@ -46,6 +46,40 @@ module.exports = async function handler(req, res) {
       FROM job_assignments ja
       LEFT JOIN jobs j ON ja.job_id = j.id
       WHERE ja.assigned_date = ${today}
+      ORDER BY ja.assigned_date DESC
+    `;
+
+    // Test filtering by date range (like mobile apps do)
+    const todayRangeAssignments = await sql`
+      SELECT 
+        ja.id,
+        ja.job_id,
+        ja.user_id,
+        ja.technician_name,
+        ja.assigned_date,
+        ja.status,
+        j.title as job_title,
+        j.customer_name as job_customer_name
+      FROM job_assignments ja
+      LEFT JOIN jobs j ON ja.job_id = j.id
+      WHERE ja.assigned_date >= ${today} AND ja.assigned_date <= ${today}
+      ORDER BY ja.assigned_date DESC
+    `;
+
+    // Test with date casting
+    const todayCastAssignments = await sql`
+      SELECT 
+        ja.id,
+        ja.job_id,
+        ja.user_id,
+        ja.technician_name,
+        ja.assigned_date,
+        ja.status,
+        j.title as job_title,
+        j.customer_name as job_customer_name
+      FROM job_assignments ja
+      LEFT JOIN jobs j ON ja.job_id = j.id
+      WHERE DATE(ja.assigned_date) = ${today}
       ORDER BY ja.assigned_date DESC
     `;
 
@@ -68,6 +102,8 @@ module.exports = async function handler(req, res) {
       today: today,
       allAssignments: allAssignments.rows,
       todayAssignments: todayAssignments.rows,
+      todayRangeAssignments: todayRangeAssignments.rows,
+      todayCastAssignments: todayCastAssignments.rows,
       dateFormats: dateFormats.rows,
       timestamp: new Date().toISOString()
     });
