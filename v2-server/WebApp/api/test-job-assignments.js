@@ -19,7 +19,8 @@ module.exports = async function handler(req, res) {
         ja.status,
         j.title as job_title,
         j.customer_name as job_customer_name,
-        j.created_at as job_created_at
+        j.created_at as job_created_at,
+        ja.created_at as assignment_created_at
       FROM job_assignments ja
       LEFT JOIN jobs j ON ja.job_id = j.id
       ORDER BY ja.assigned_date DESC
