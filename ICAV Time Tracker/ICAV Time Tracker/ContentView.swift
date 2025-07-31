@@ -712,6 +712,12 @@ struct ContentView: View {
             updatedEntry.aiSummary = summary
             updatedEntry.clockOutTime = Date()
             
+            // Update the entry in the view model
+            if let index = viewModel.timeEntries.firstIndex(where: { $0.id == entry.id }) {
+                viewModel.timeEntries[index] = updatedEntry
+                viewModel.saveData()
+            }
+            
             // Sync to server first
             let success = await syncTimeEntryToServer(updatedEntry)
             
@@ -738,15 +744,18 @@ struct ContentView: View {
                         
                         // Wait for share to complete before proceeding
                         await MainActor.run {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                                 // Complete the clock out in the view model
                                 viewModel.clockOut()
                                 
-                                // Close the modal after clock out
-                                showingJobNotesModal = false
-                                jobNotesEntry = nil
-                                jobNotesText = ""
-                                aiSummary = ""
+                                // Force UI refresh
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                    // Close the modal after clock out
+                                    showingJobNotesModal = false
+                                    jobNotesEntry = nil
+                                    jobNotesText = ""
+                                    aiSummary = ""
+                                }
                             }
                         }
                     }
@@ -760,11 +769,14 @@ struct ContentView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                         viewModel.clockOut()
                         
-                        // Close the modal after clock out
-                        showingJobNotesModal = false
-                        jobNotesEntry = nil
-                        jobNotesText = ""
-                        aiSummary = ""
+                        // Force UI refresh
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            // Close the modal after clock out
+                            showingJobNotesModal = false
+                            jobNotesEntry = nil
+                            jobNotesText = ""
+                            aiSummary = ""
+                        }
                     }
                 }
             }
