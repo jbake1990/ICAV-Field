@@ -54,7 +54,6 @@ module.exports = async function handler(req, res) {
     const dateFormats = await sql`
       SELECT DISTINCT 
         assigned_date,
-        typeof(assigned_date) as date_type,
         assigned_date::text as date_text
       FROM job_assignments
       ORDER BY assigned_date DESC
