@@ -186,28 +186,13 @@ const TimeEntryCard: React.FC<TimeEntryCardProps> = ({ entry, onClick, onDelete,
           </div>
         )}
 
-        {/* Job Notes Section */}
-        {entry.jobNotes && entry.jobNotes.trim() && (
-          <div className="pt-3 border-t border-gray-100">
-            <div className="flex items-start space-x-2">
-              <FileText className="w-4 h-4 text-gray-500 mt-1" />
-              <div className="flex-1">
-                <p className="text-sm text-gray-500 font-medium mb-1">Job Notes</p>
-                <p className="text-sm text-gray-700 leading-relaxed">
-                  {entry.jobNotes}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* AI Summary Section */}
+        {/* Work Summary Section */}
         {entry.aiSummary && entry.aiSummary.trim() && (
           <div className="pt-3 border-t border-gray-100">
             <div className="flex items-start space-x-2">
               <Brain className="w-4 h-4 text-purple-500 mt-1" />
               <div className="flex-1">
-                <p className="text-sm text-purple-600 font-medium mb-1">AI Summary</p>
+                <p className="text-sm text-purple-600 font-medium mb-1">Work Summary</p>
                 <div className="text-sm text-gray-700 leading-relaxed bg-purple-50 p-3 rounded-lg">
                   {entry.aiSummary}
                 </div>

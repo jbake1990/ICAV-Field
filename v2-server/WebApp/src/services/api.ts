@@ -43,6 +43,7 @@ export interface ApiTimeEntry {
   formattedLunchDuration?: string;
   driveDuration?: number;
   formattedDriveDuration?: string;
+  aiSummary?: string;
 }
 
 export interface ApiUser {

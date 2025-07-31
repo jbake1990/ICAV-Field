@@ -30,9 +30,7 @@ data class TimeEntry(
     @SerializedName("driveEndTime")
     var driveEndTime: Date? = null,
     
-    // Job notes and AI summary
-    @SerializedName("jobNotes")
-    var jobNotes: String = "",
+    // AI summary
     @SerializedName("aiSummary")
     var aiSummary: String = "",
     

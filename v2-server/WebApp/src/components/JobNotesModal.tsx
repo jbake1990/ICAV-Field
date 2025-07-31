@@ -70,37 +70,12 @@ export default function JobNotesModal({ entry, onClose }: JobNotesModalProps) {
             </div>
           </div>
 
-          {/* Job Notes */}
-          {entry.jobNotes && entry.jobNotes.trim() ? (
-            <div className="mb-6">
-              <div className="flex items-center space-x-2 mb-3">
-                <FileText className="w-5 h-5 text-gray-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Job Notes</h3>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg border">
-                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
-                  {entry.jobNotes}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="mb-6">
-              <div className="flex items-center space-x-2 mb-3">
-                <FileText className="w-5 h-5 text-gray-400" />
-                <h3 className="text-lg font-semibold text-gray-400">Job Notes</h3>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg border border-dashed border-gray-300">
-                <p className="text-gray-500 text-center">No job notes available</p>
-              </div>
-            </div>
-          )}
-
           {/* AI Summary */}
           {entry.aiSummary && entry.aiSummary.trim() ? (
             <div>
               <div className="flex items-center space-x-2 mb-3">
                 <Brain className="w-5 h-5 text-purple-600" />
-                <h3 className="text-lg font-semibold text-purple-600">AI Summary</h3>
+                <h3 className="text-lg font-semibold text-purple-600">Work Summary</h3>
               </div>
               <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
                 <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
@@ -112,10 +87,10 @@ export default function JobNotesModal({ entry, onClose }: JobNotesModalProps) {
             <div>
               <div className="flex items-center space-x-2 mb-3">
                 <Brain className="w-5 h-5 text-gray-400" />
-                <h3 className="text-lg font-semibold text-gray-400">AI Summary</h3>
+                <h3 className="text-lg font-semibold text-gray-400">Work Summary</h3>
               </div>
               <div className="bg-purple-50 p-4 rounded-lg border border-dashed border-purple-200">
-                <p className="text-gray-500 text-center">No AI summary available</p>
+                <p className="text-gray-500 text-center">No work summary available</p>
               </div>
             </div>
           )}

@@ -22,8 +22,7 @@ struct TimeEntry: Identifiable, Codable {
     var driveStartTime: Date?
     var driveEndTime: Date?
     
-    // Job notes and AI summary
-    var jobNotes: String = ""
+    // AI summary
     var aiSummary: String = ""
     
     // Sync tracking
@@ -36,7 +35,7 @@ struct TimeEntry: Identifiable, Codable {
     var markedForDeletion: Bool = false // Whether this entry is marked for deletion
     
     // Custom initializer to generate UUID
-    init(userId: String, technicianName: String, customerName: String, clockInTime: Date, clockOutTime: Date? = nil, lunchStartTime: Date? = nil, lunchEndTime: Date? = nil, driveStartTime: Date? = nil, driveEndTime: Date? = nil, jobNotes: String = "", aiSummary: String = "") {
+    init(userId: String, technicianName: String, customerName: String, clockInTime: Date, clockOutTime: Date? = nil, lunchStartTime: Date? = nil, lunchEndTime: Date? = nil, driveStartTime: Date? = nil, driveEndTime: Date? = nil, aiSummary: String = "") {
         self.id = UUID()
         self.userId = userId
         self.technicianName = technicianName
@@ -49,7 +48,6 @@ struct TimeEntry: Identifiable, Codable {
         self.lunchEndTime = lunchEndTime
         self.driveStartTime = driveStartTime
         self.driveEndTime = driveEndTime
-        self.jobNotes = jobNotes
         self.aiSummary = aiSummary
     }
     
@@ -67,7 +65,6 @@ struct TimeEntry: Identifiable, Codable {
         self.lunchEndTime = nil
         self.driveStartTime = driveStartTime
         self.driveEndTime = nil
-        self.jobNotes = ""
         self.aiSummary = ""
     }
     
@@ -85,7 +82,6 @@ struct TimeEntry: Identifiable, Codable {
         self.lunchEndTime = nil
         self.driveStartTime = nil
         self.driveEndTime = nil
-        self.jobNotes = ""
         self.aiSummary = ""
         self.serverId = nil
         self.isSynced = false
