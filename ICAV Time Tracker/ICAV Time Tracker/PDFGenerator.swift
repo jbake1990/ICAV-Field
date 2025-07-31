@@ -112,18 +112,7 @@ class PDFGenerator: ObservableObject {
         yPosition += 20
         yPosition += drawLine()
         
-        // Job Notes Section
-        if !report.jobNotes.isEmpty {
-            yPosition += drawText("DETAILED NOTES", 
-                                 font: UIFont.boldSystemFont(ofSize: 16), 
-                                 color: .darkGray)
-            
-            yPosition += drawText(report.jobNotes, 
-                                 font: UIFont.systemFont(ofSize: 12))
-            
-            yPosition += 20
-            yPosition += drawLine()
-        }
+
         
         // AI Summary Section
         if !report.aiSummary.isEmpty {
@@ -188,10 +177,10 @@ class PDFGenerator: ObservableObject {
         }
     }
     
-    func createJobReport(from timeEntry: TimeEntry, jobNotes: String, aiSummary: String) -> JobReport {
+    func createJobReport(from timeEntry: TimeEntry, aiSummary: String) -> JobReport {
         return JobReport(
             timeEntry: timeEntry,
-            jobNotes: jobNotes,
+            jobNotes: "", // No longer storing job notes
             aiSummary: aiSummary,
             technicianName: timeEntry.technicianName,
             customerName: timeEntry.customerName,

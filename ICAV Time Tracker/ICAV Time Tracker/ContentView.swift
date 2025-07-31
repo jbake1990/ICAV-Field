@@ -707,9 +707,8 @@ struct ContentView: View {
         guard let entry = jobNotesEntry else { return }
         
         Task {
-            // Update the TimeEntry with notes and summary
+            // Update the TimeEntry with summary only
             var updatedEntry = entry
-            updatedEntry.jobNotes = notes
             updatedEntry.aiSummary = summary
             updatedEntry.clockOutTime = Date()
             
@@ -722,7 +721,6 @@ struct ContentView: View {
                 // Generate PDF
                 let report = pdfGenerator.createJobReport(
                     from: updatedEntry,
-                    jobNotes: notes,
                     aiSummary: summary
                 )
                 

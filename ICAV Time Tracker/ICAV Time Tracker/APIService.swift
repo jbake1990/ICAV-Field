@@ -19,7 +19,6 @@ struct APITimeEntry: Codable {
     let lunchEndTime: String?
     let driveStartTime: String?
     let driveEndTime: String?
-    let jobNotes: String?
     let aiSummary: String?
     let jobAssignmentId: String?
 }
@@ -379,7 +378,6 @@ class APIService: ObservableObject {
             lunchEndTime: entry.lunchEndTime.map { dateFormatter.string(from: $0) },
             driveStartTime: entry.driveStartTime.map { dateFormatter.string(from: $0) },
             driveEndTime: entry.driveEndTime.map { dateFormatter.string(from: $0) },
-            jobNotes: entry.jobNotes.isEmpty ? nil : entry.jobNotes,
             aiSummary: entry.aiSummary.isEmpty ? nil : entry.aiSummary,
             jobAssignmentId: entry.jobAssignmentId
         )
