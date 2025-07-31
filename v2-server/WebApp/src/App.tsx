@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Clock, Users, Settings, Download, X, UserPlus, Trash2, LogOut, UserCheck, Shield, FileText, Calendar, Brain } from 'lucide-react';
+import { Clock, Users, Settings, Download, X, UserPlus, Trash2, LogOut, UserCheck, Shield, FileText, Calendar, Brain, Wrench } from 'lucide-react';
 import { TimeEntry, TimeEntryFilters, DashboardStats, User, Job, JobAssignment } from './types';
 import { api } from './services/api';
 import DashboardStatsComponent from './components/DashboardStats';
@@ -47,68 +47,68 @@ function AppContent() {
   }, [authState.isAuthenticated]);
 
   // Load all data from API
-  useEffect(() => {
-    const loadData = async () => {
-      if (!authState.isAuthenticated) {
-        console.log('User not authenticated, skipping data load');
-        return;
-      }
+  const loadData = async () => {
+    if (!authState.isAuthenticated) {
+      console.log('User not authenticated, skipping data load');
+      return;
+    }
+    
+    try {
+      setLoading(true);
       
-      try {
-        setLoading(true);
-        
-        // Load time entries, users, jobs, and assignments in parallel
-        const [apiEntries, apiUsers, apiJobs, apiAssignments] = await Promise.all([
-          api.getTimeEntries(),
-          api.getUsers(), // Load users for everyone, not just admins (needed for calendar)
-          api.getJobs(),
-          api.getJobAssignments()
-        ]);
-        
-        // Convert API data to frontend format
-        const formattedEntries: TimeEntry[] = apiEntries.map(entry => ({
-          ...entry,
-          clockInTime: entry.clockInTime ? new Date(entry.clockInTime) : undefined,
-          clockOutTime: entry.clockOutTime ? new Date(entry.clockOutTime) : undefined,
-          lunchStartTime: entry.lunchStartTime ? new Date(entry.lunchStartTime) : undefined,
-          lunchEndTime: entry.lunchEndTime ? new Date(entry.lunchEndTime) : undefined,
-          driveStartTime: entry.driveStartTime ? new Date(entry.driveStartTime) : undefined,
-          driveEndTime: entry.driveEndTime ? new Date(entry.driveEndTime) : undefined,
-        }));
+      // Load time entries, users, jobs, and assignments in parallel
+      const [apiEntries, apiUsers, apiJobs, apiAssignments] = await Promise.all([
+        api.getTimeEntries(),
+        api.getUsers(), // Load users for everyone, not just admins (needed for calendar)
+        api.getJobs(),
+        api.getJobAssignments()
+      ]);
+      
+      // Convert API data to frontend format
+      const formattedEntries: TimeEntry[] = apiEntries.map(entry => ({
+        ...entry,
+        clockInTime: entry.clockInTime ? new Date(entry.clockInTime) : undefined,
+        clockOutTime: entry.clockOutTime ? new Date(entry.clockOutTime) : undefined,
+        lunchStartTime: entry.lunchStartTime ? new Date(entry.lunchStartTime) : undefined,
+        lunchEndTime: entry.lunchEndTime ? new Date(entry.lunchEndTime) : undefined,
+        driveStartTime: entry.driveStartTime ? new Date(entry.driveStartTime) : undefined,
+        driveEndTime: entry.driveEndTime ? new Date(entry.driveEndTime) : undefined,
+      }));
 
-        const formattedJobs: Job[] = apiJobs.map(job => ({
-          ...job,
-          status: job.status as Job['status'],
-          priority: job.priority as Job['priority'],
-          createdAt: new Date(job.createdAt),
-          updatedAt: new Date(job.updatedAt)
-        }));
+      const formattedJobs: Job[] = apiJobs.map(job => ({
+        ...job,
+        status: job.status as Job['status'],
+        priority: job.priority as Job['priority'],
+        createdAt: new Date(job.createdAt),
+        updatedAt: new Date(job.updatedAt)
+      }));
 
-        const formattedAssignments: JobAssignment[] = apiAssignments.map(assignment => ({
-          ...assignment,
-          status: assignment.status as JobAssignment['status'],
-          assignedDate: new Date(assignment.assignedDate),
-          createdAt: new Date(assignment.createdAt),
-          updatedAt: new Date(assignment.updatedAt)
-        }));
-        
-        setTimeEntries(formattedEntries);
-        setUsers(apiUsers.map(user => ({
-          ...user,
-          role: user.role || 'tech' as 'tech' | 'admin',
-          isActive: user.isActive !== undefined ? user.isActive : true
-        })));
-        setJobs(formattedJobs);
-        setAssignments(formattedAssignments);
-        setError(null);
-      } catch (error) {
-        console.error('Failed to load data:', error);
-        setError(error instanceof Error ? error.message : 'Failed to load data');
-      } finally {
-        setLoading(false);
-      }
-    };
+      const formattedAssignments: JobAssignment[] = apiAssignments.map(assignment => ({
+        ...assignment,
+        status: assignment.status as JobAssignment['status'],
+        assignedDate: new Date(assignment.assignedDate),
+        createdAt: new Date(assignment.createdAt),
+        updatedAt: new Date(assignment.updatedAt)
+      }));
+      
+      setTimeEntries(formattedEntries);
+      setUsers(apiUsers.map(user => ({
+        ...user,
+        role: user.role || 'tech' as 'tech' | 'admin',
+        isActive: user.isActive !== undefined ? user.isActive : true
+      })));
+      setJobs(formattedJobs);
+      setAssignments(formattedAssignments);
+      setError(null);
+    } catch (error) {
+      console.error('Failed to load data:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadData();
   }, [authState.isAuthenticated, authState.user?.role]);
 
@@ -366,6 +366,38 @@ function AppContent() {
     }
   };
 
+  const handleCleanupEntries = async () => {
+    if (!window.confirm('This will clean up invalid entries (null dates, duplicates, etc.). Continue?')) {
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/cleanup-entries', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Cleanup failed');
+      }
+      
+      const result = await response.json();
+      console.log('Cleanup completed:', result);
+      
+      // Refresh data after cleanup
+      await loadData();
+      
+      alert(`Cleanup completed successfully!\n\nDeleted: ${result.deletedCount} entries\nUpdated: ${result.updatedCount} entries\n\nFound:\n- ${result.invalidEntriesFound} invalid entries\n- ${result.oldEntriesFound} old entries\n- ${result.duplicateEntriesFound} duplicate entries`);
+    } catch (error) {
+      console.error('Failed to cleanup entries:', error);
+      alert(`Failed to cleanup entries: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   const handleDeleteEntry = async (entryId: string) => {
     if (!window.confirm('Are you sure you want to delete this time entry? This action cannot be undone.')) {
       return;
@@ -373,21 +405,65 @@ function AppContent() {
     
     setDeletingEntry(entryId);
     try {
+      console.log('Attempting to delete entry:', entryId);
+      console.log('Entry details:', timeEntries.find(e => e.id === entryId));
+      
       const result = await api.deleteTimeEntry(entryId);
       console.log('Entry deleted successfully:', result);
       
       // Remove the entry from the local state
-      setTimeEntries(prevEntries => prevEntries.filter(entry => entry.id !== entryId));
+      setTimeEntries(prevEntries => {
+        const filtered = prevEntries.filter(entry => entry.id !== entryId);
+        console.log(`Removed entry ${entryId} from local state. Remaining entries: ${filtered.length}`);
+        return filtered;
+      });
       
       // If the deleted entry was selected, clear the selection
       if (selectedEntry?.id === entryId) {
         setSelectedEntry(null);
+        console.log('Cleared selected entry after deletion');
       }
       
+      // Show success message
       alert(`Entry for ${result.deletedEntry.customerName} deleted successfully.`);
+      
+      // Refresh data from server to ensure consistency
+      console.log('Refreshing data from server after deletion...');
+      const apiEntries = await api.getTimeEntries();
+      const formattedEntries = apiEntries.map(entry => ({
+        ...entry,
+        clockInTime: entry.clockInTime ? new Date(entry.clockInTime) : undefined,
+        clockOutTime: entry.clockOutTime ? new Date(entry.clockOutTime) : undefined,
+        lunchStartTime: entry.lunchStartTime ? new Date(entry.lunchStartTime) : undefined,
+        lunchEndTime: entry.lunchEndTime ? new Date(entry.lunchEndTime) : undefined,
+        driveStartTime: entry.driveStartTime ? new Date(entry.driveStartTime) : undefined,
+        driveEndTime: entry.driveEndTime ? new Date(entry.driveEndTime) : undefined,
+      }));
+      setTimeEntries(formattedEntries);
+      console.log('Data refreshed from server after deletion');
+      
     } catch (error) {
       console.error('Failed to delete entry:', error);
-      alert('Failed to delete entry. Please try again.');
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace',
+        entryId: entryId
+      });
+      
+      // Show more detailed error message
+      let errorMessage = 'Failed to delete entry. ';
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      if (errorMsg.includes('404')) {
+        errorMessage += 'Entry not found on server.';
+      } else if (errorMsg.includes('403')) {
+        errorMessage += 'You are not authorized to delete this entry.';
+      } else if (errorMsg.includes('401')) {
+        errorMessage += 'Please log in again.';
+      } else {
+        errorMessage += 'Please try again.';
+      }
+      
+      alert(errorMessage);
     } finally {
       setDeletingEntry(null);
     }
@@ -860,6 +936,25 @@ function AppContent() {
                     >
                       <Trash2 className="w-4 h-4" />
                       <span>Clear All Time Entries</span>
+                    </button>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <h4 className="text-md font-medium text-gray-900 mb-2">Cleanup Invalid Entries</h4>
+                    <p className="text-gray-600 mb-4">
+                      Remove entries with null dates, duplicates, and other data inconsistencies. This will help clean up the database.
+                    </p>
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                      <p className="text-sm text-yellow-800">
+                        <strong>Note:</strong> This will only remove entries with invalid data. Valid entries will be preserved.
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleCleanupEntries}
+                      className="flex items-center space-x-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                    >
+                      <Wrench className="w-4 h-4" />
+                      <span>Cleanup Invalid Entries</span>
                     </button>
                   </div>
                 </div>
