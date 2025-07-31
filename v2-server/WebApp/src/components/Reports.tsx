@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Calendar, Download, FileText, Users, Building, X } from 'lucide-react';
 import { TimeEntry, ReportType, ReportFilters, ReportData, TechnicianReport, CustomerReport } from '../types';
 import { formatDate, formatTime } from '../utils/timeUtils';
@@ -19,6 +19,18 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
     includeLunchTime: true,
     groupBy: 'technician'
   });
+
+  // Handle escape key to close modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
 
   const reportTypes = [
     { id: 'technician', name: 'Technician Report', icon: Users, description: 'Time entries grouped by technician' },
@@ -181,8 +193,17 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
     window.URL.revokeObjectURL(url);
   };
 
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={handleBackdropClick}
+    >
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b flex-shrink-0">

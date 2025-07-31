@@ -192,6 +192,16 @@ function AppContent() {
     }).filter(dateStr => dateStr !== 'unknown')).size);
     const techniciansWorking = new Set(timeEntries.filter(entry => entry.isActive).map(entry => entry.userId)).size;
 
+    console.log('Dashboard stats calculated:', {
+      totalEntries,
+      activeEntries,
+      totalHours: totalHours.toFixed(2),
+      averageHoursPerDay: averageHoursPerDay.toFixed(2),
+      techniciansWorking,
+      timeEntriesCount: timeEntries.length,
+      entriesWithDuration: timeEntries.filter(entry => entry.duration).length
+    });
+
     return {
       totalEntries,
       activeEntries,
