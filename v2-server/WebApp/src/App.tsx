@@ -110,6 +110,35 @@ function AppContent() {
     loadData();
   }, [authState.isAuthenticated, authState.user?.role]);
 
+  // Real-time updates for active time entries
+  useEffect(() => {
+    if (!authState.isAuthenticated) return;
+
+    const interval = setInterval(async () => {
+      try {
+        // Only refresh time entries for real-time updates
+        const apiEntries = await api.getTimeEntries();
+        
+        const formattedEntries: TimeEntry[] = apiEntries.map(entry => ({
+          ...entry,
+          clockInTime: entry.clockInTime ? new Date(entry.clockInTime) : undefined,
+          clockOutTime: entry.clockOutTime ? new Date(entry.clockOutTime) : undefined,
+          lunchStartTime: entry.lunchStartTime ? new Date(entry.lunchStartTime) : undefined,
+          lunchEndTime: entry.lunchEndTime ? new Date(entry.lunchEndTime) : undefined,
+          driveStartTime: entry.driveStartTime ? new Date(entry.driveStartTime) : undefined,
+          driveEndTime: entry.driveEndTime ? new Date(entry.driveEndTime) : undefined,
+        }));
+
+        setTimeEntries(formattedEntries);
+      } catch (error) {
+        console.error('Failed to refresh time entries:', error);
+        // Don't show error to user for background refresh
+      }
+    }, 5000); // Refresh every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [authState.isAuthenticated]);
+
   // Filter time entries based on current filters
   const filteredEntries = useMemo(() => {
     let filtered = [...timeEntries];
