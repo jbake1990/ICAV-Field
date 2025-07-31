@@ -789,12 +789,15 @@ class TimeTrackerViewModel: ObservableObject {
         do {
             print("📋 Loading job assignments for user: \(currentUser.id)")
             
-            // Get today's date in ISO format
+            // Get today's date in YYYY-MM-DD format (same as Android)
             let today = Date()
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withFullDate]
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            formatter.timeZone = TimeZone.current
             let startDate = formatter.string(from: today)
             let endDate = startDate
+            
+            print("📅 Fetching job assignments for date: \(startDate)")
             
             let assignments = try await apiService.getJobAssignments(
                 token: token,

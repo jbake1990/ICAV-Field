@@ -740,17 +740,21 @@ struct ContentView: View {
                     }
                 }
                 
-                // Complete the clock out in the view model
+                // Complete the clock out in the view model after a delay to allow share to complete
                 await MainActor.run {
-                    viewModel.clockOut()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        viewModel.clockOut()
+                    }
                 }
             } else {
                 print("❌ Failed to sync to server")
                 // TODO: Handle sync failure - maybe store locally for later sync
                 
-                // Still clock out even if sync fails
+                // Still clock out even if sync fails, but with delay
                 await MainActor.run {
-                    viewModel.clockOut()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        viewModel.clockOut()
+                    }
                 }
             }
             

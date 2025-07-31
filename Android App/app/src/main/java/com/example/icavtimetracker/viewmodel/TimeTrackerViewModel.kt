@@ -710,6 +710,8 @@ class TimeTrackerViewModel(application: Application) : AndroidViewModel(applicat
                 val startDate = today.toString()
                 val endDate = today.toString()
                 
+                Log.d("TimeTrackerViewModel", "📅 Fetching job assignments for date: $startDate")
+                
                 repository.getJobAssignments(
                     userId = currentUser.id,
                     startDate = startDate,
