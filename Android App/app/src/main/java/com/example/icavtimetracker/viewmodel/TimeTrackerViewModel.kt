@@ -757,8 +757,21 @@ class TimeTrackerViewModel(application: Application) : AndroidViewModel(applicat
                 }
                 
                 val currentEntries = _timeEntries.value.toMutableList()
-                var newEntriesAdded = false
                 
+                // Remove all existing time entries that were created from job assignments
+                val entriesToRemove = currentEntries.filter { entry ->
+                    entry.jobAssignmentId != null
+                }
+                
+                for (entry in entriesToRemove) {
+                    Log.d("TimeTrackerViewModel", "🗑️ Removing old job assignment entry: ${entry.customerName}")
+                }
+                
+                currentEntries.removeAll { entry ->
+                    entry.jobAssignmentId != null
+                }
+                
+                // Create new time entries for current assignments
                 for (assignment in assignments) {
                     val job = assignment.job
                     if (job == null) {
@@ -766,37 +779,26 @@ class TimeTrackerViewModel(application: Application) : AndroidViewModel(applicat
                         continue
                     }
                     
-                    // Check if we already have a time entry for this job assignment
-                    val existingEntry = currentEntries.find { entry ->
-                        entry.jobAssignmentId == assignment.id
-                    }
+                    Log.d("TimeTrackerViewModel", "Creating time entry for scheduled job: ${job.customerName}")
                     
-                    if (existingEntry == null) {
-                        Log.d("TimeTrackerViewModel", "Creating time entry for scheduled job: ${job.customerName}")
-                        
-                        // Create a new time entry for this job assignment
-                        val newEntry = TimeEntry(
-                            userId = currentUser.id,
-                            technicianName = currentUser.displayName,
-                            customerName = job.customerName,
-                            jobAssignmentId = assignment.id // Link to the job assignment
-                        )
-                        
-                        // Mark for sync
-                        newEntry.markForSync()
-                        currentEntries.add(newEntry)
-                        newEntriesAdded = true
-                        
-                        Log.d("TimeTrackerViewModel", "Created time entry for job assignment: ${newEntry.id}")
-                    } else {
-                        Log.d("TimeTrackerViewModel", "Time entry already exists for job: ${job.customerName}")
-                    }
+                    // Create a new time entry for this job assignment
+                    val newEntry = TimeEntry(
+                        userId = currentUser.id,
+                        technicianName = currentUser.displayName,
+                        customerName = job.customerName,
+                        jobAssignmentId = assignment.id // Link to the job assignment
+                    )
+                    
+                    // Mark for sync
+                    newEntry.markForSync()
+                    currentEntries.add(newEntry)
+                    
+                    Log.d("TimeTrackerViewModel", "Created time entry for job assignment: ${newEntry.id}")
                 }
                 
-                if (newEntriesAdded) {
-                    _timeEntries.value = currentEntries
-                    updatePendingSyncCount()
-                }
+                // Update the time entries list
+                _timeEntries.value = currentEntries
+                updatePendingSyncCount()
                 
             } catch (e: Exception) {
                 Log.e("TimeTrackerViewModel", "Exception creating time entries from assignments", e)

@@ -830,36 +830,41 @@ class TimeTrackerViewModel: ObservableObject {
             return
         }
         
+        // Remove all existing time entries that were created from job assignments
+        let entriesToRemove = timeEntries.filter { entry in
+            entry.jobAssignmentId != nil
+        }
+        
+        for entry in entriesToRemove {
+            print("🗑️ Removing old job assignment entry: \(entry.customerName)")
+        }
+        
+        timeEntries.removeAll { entry in
+            entry.jobAssignmentId != nil
+        }
+        
+        // Create new time entries for current assignments
         for assignment in assignments {
             guard let job = assignment.job else {
                 print("❌ No job data available for assignment")
                 continue
             }
             
-            // Check if we already have a time entry for this job assignment
-            let existingEntry = timeEntries.first { entry in
-                entry.jobAssignmentId == assignment.id
-            }
+            print("📋 Creating time entry for scheduled job: \(job.customerName)")
             
-            if existingEntry == nil {
-                print("📋 Creating time entry for scheduled job: \(job.customerName)")
-                
-                // Create a new time entry for this job assignment
-                var newEntry = TimeEntry(
-                    userId: currentUser.id,
-                    technicianName: currentUser.displayName,
-                    customerName: job.customerName,
-                    jobAssignmentId: assignment.id // Link to the job assignment
-                )
-                
-                // Mark for sync
-                newEntry.markForSync()
-                timeEntries.append(newEntry)
-                
-                print("✅ Created time entry for job assignment: \(newEntry.id)")
-            } else {
-                print("📋 Time entry already exists for job: \(job.customerName)")
-            }
+            // Create a new time entry for this job assignment
+            var newEntry = TimeEntry(
+                userId: currentUser.id,
+                technicianName: currentUser.displayName,
+                customerName: job.customerName,
+                jobAssignmentId: assignment.id // Link to the job assignment
+            )
+            
+            // Mark for sync
+            newEntry.markForSync()
+            timeEntries.append(newEntry)
+            
+            print("✅ Created time entry for job assignment: \(newEntry.id)")
         }
         
         saveData()
