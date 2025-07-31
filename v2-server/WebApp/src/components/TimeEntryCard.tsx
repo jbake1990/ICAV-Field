@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, User, Building, Calendar, Timer, Car, Trash2, FileText, Brain, Share2 } from 'lucide-react';
+import { Clock, User, Building, Calendar, Timer, Car, Trash2, FileText, Brain } from 'lucide-react';
 import { TimeEntry } from '../types';
 import { formatTime, formatDate, formatDuration, getStatusColor, getStatusText } from '../utils/timeUtils';
 
@@ -29,36 +29,6 @@ const TimeEntryCard: React.FC<TimeEntryCardProps> = ({ entry, onClick, onDelete,
     }
   };
 
-  const handleShare = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent triggering the card's onClick
-    
-    const shareData = {
-      title: `Time Entry - ${entry.customerName}`,
-      text: `Technician: ${entry.technicianName}\nCustomer: ${entry.customerName}\nStatus: ${statusText}\n${entry.clockInTime ? `Clock In: ${formatTime(entry.clockInTime)}` : ''}\n${entry.clockOutTime ? `Clock Out: ${formatTime(entry.clockOutTime)}` : ''}\n${entry.duration ? `Duration: ${entry.formattedDuration}` : ''}`,
-      url: window.location.href
-    };
-
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else {
-        // Fallback: copy to clipboard
-        await navigator.clipboard.writeText(shareData.text);
-        alert('Time entry details copied to clipboard!');
-      }
-    } catch (error) {
-      console.error('Error sharing:', error);
-      // Fallback: copy to clipboard
-      try {
-        await navigator.clipboard.writeText(shareData.text);
-        alert('Time entry details copied to clipboard!');
-      } catch (clipboardError) {
-        console.error('Error copying to clipboard:', clipboardError);
-        alert('Unable to share or copy time entry details');
-      }
-    }
-  };
-
   return (
     <div 
       className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow ${
@@ -75,13 +45,6 @@ const TimeEntryCard: React.FC<TimeEntryCardProps> = ({ entry, onClick, onDelete,
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColor}`}>
             {statusText}
           </span>
-          <button
-            onClick={handleShare}
-            className="p-2 rounded-full hover:bg-blue-50 transition-colors hover:text-blue-600"
-            title="Share time entry"
-          >
-            <Share2 className="w-4 h-4 text-gray-400 hover:text-blue-600" />
-          </button>
           {onDelete && (
             <button
               onClick={handleDelete}

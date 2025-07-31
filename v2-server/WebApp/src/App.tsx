@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Clock, Users, Settings, Download, X, UserPlus, Trash2, LogOut, UserCheck, Shield, FileText, Calendar } from 'lucide-react';
+import { Clock, Users, Settings, Download, X, UserPlus, Trash2, LogOut, UserCheck, Shield, FileText, Calendar, Brain } from 'lucide-react';
 import { TimeEntry, TimeEntryFilters, DashboardStats, User, Job, JobAssignment } from './types';
 import { api } from './services/api';
 import DashboardStatsComponent from './components/DashboardStats';
@@ -8,6 +8,7 @@ import TimeEntryCard from './components/TimeEntryCard';
 import { LoginForm } from './components/LoginForm';
 import Reports from './components/Reports';
 import JobCalendar from './components/JobCalendar';
+import JobNotesView from './components/JobNotesView';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { formatDate, formatTime } from './utils/timeUtils';
 
@@ -25,6 +26,7 @@ function AppContent() {
   const [showSettings, setShowSettings] = useState(false);
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [showReports, setShowReports] = useState(false);
+  const [showJobNotes, setShowJobNotes] = useState(false);
   const [newUser, setNewUser] = useState({ username: '', displayName: '', password: '', role: 'tech' });
   const [creatingUser, setCreatingUser] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
@@ -620,6 +622,14 @@ function AppContent() {
                   <FileText className="w-4 h-4" />
                   <span>Reports</span>
                 </button>
+                
+                <button
+                  onClick={() => setShowJobNotes(true)}
+                  className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
+                >
+                  <Brain className="w-4 h-4" />
+                  <span>Job Notes</span>
+                </button>
               </div>
 
               {/* Admin-only features */}
@@ -737,6 +747,13 @@ function AppContent() {
           <Reports
             timeEntries={timeEntries}
             onClose={() => setCurrentView('dashboard')}
+          />
+        )}
+
+        {showJobNotes && (
+          <JobNotesView
+            timeEntries={timeEntries}
+            onClose={() => setShowJobNotes(false)}
           />
         )}
       </main>

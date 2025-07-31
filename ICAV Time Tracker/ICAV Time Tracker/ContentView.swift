@@ -737,13 +737,20 @@ struct ContentView: View {
                         await MainActor.run {
                             shareManager.sharePDF(pdfData: pdfData, fileName: fileName)
                         }
-                    }
-                }
-                
-                // Complete the clock out in the view model after a delay to allow share to complete
-                await MainActor.run {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                        viewModel.clockOut()
+                        
+                        // Wait for share to complete before proceeding
+                        await MainActor.run {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                                // Complete the clock out in the view model
+                                viewModel.clockOut()
+                                
+                                // Close the modal after clock out
+                                showingJobNotesModal = false
+                                jobNotesEntry = nil
+                                jobNotesText = ""
+                                aiSummary = ""
+                            }
+                        }
                     }
                 }
             } else {
@@ -754,16 +761,14 @@ struct ContentView: View {
                 await MainActor.run {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                         viewModel.clockOut()
+                        
+                        // Close the modal after clock out
+                        showingJobNotesModal = false
+                        jobNotesEntry = nil
+                        jobNotesText = ""
+                        aiSummary = ""
                     }
                 }
-            }
-            
-            // Close the modal
-            await MainActor.run {
-                showingJobNotesModal = false
-                jobNotesEntry = nil
-                jobNotesText = ""
-                aiSummary = ""
             }
         }
         

@@ -563,6 +563,10 @@ fun MainScreen(
                                 if (pdfBytes != null) {
                                     shareManager.sharePDFFromByteArray(pdfBytes, "Job Notes - ${entry.customerName}")
                                 }
+                                
+                                // Wait for share to complete before proceeding
+                                delay(3000) // 3 second delay
+                                
                             } catch (e: Exception) {
                                 // Handle PDF generation error
                             }
@@ -570,13 +574,14 @@ fun MainScreen(
                         } catch (e: Exception) {
                             // Handle error
                         }
+                        
+                        // Close the modal after delay
+                        showJobNotesDialog = false
+                        jobNotesEntry = null
+                        jobNotesText = ""
+                        aiSummary = ""
                     }
                 }
-                
-                showJobNotesDialog = false
-                jobNotesEntry = null
-                jobNotesText = ""
-                aiSummary = ""
             },
             onCancel = {
                 showJobNotesDialog = false
