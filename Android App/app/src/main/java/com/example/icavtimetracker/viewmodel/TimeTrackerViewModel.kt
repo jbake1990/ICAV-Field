@@ -719,6 +719,9 @@ class TimeTrackerViewModel(application: Application) : AndroidViewModel(applicat
                 ).fold(
                     onSuccess = { assignments ->
                         Log.d("TimeTrackerViewModel", "Successfully loaded ${assignments.size} job assignments")
+                        for (assignment in assignments) {
+                            Log.d("TimeTrackerViewModel", "📋 Assignment: ${assignment.job?.customerName ?: "Unknown"} - Date: ${assignment.assignedDate}")
+                        }
                         _jobAssignments.value = assignments
                         
                         // Automatically create time entries from job assignments

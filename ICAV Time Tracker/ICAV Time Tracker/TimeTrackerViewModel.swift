@@ -807,6 +807,9 @@ class TimeTrackerViewModel: ObservableObject {
             )
             
             print("✅ Successfully loaded \(assignments.count) job assignments")
+            for assignment in assignments {
+                print("📋 Assignment: \(assignment.job?.customerName ?? "Unknown") - Date: \(assignment.assignedDate)")
+            }
             await MainActor.run {
                 self.jobAssignments = assignments
                 
