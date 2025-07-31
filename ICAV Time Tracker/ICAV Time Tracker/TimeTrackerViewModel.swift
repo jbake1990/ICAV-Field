@@ -346,7 +346,7 @@ class TimeTrackerViewModel: ObservableObject {
         }
     }
     
-    private func saveData() {
+    func saveData() {
         // Save time entries
         if let encoded = try? JSONEncoder().encode(timeEntries) {
             userDefaults.set(encoded, forKey: timeEntriesKey)
