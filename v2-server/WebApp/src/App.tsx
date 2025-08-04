@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Clock, Users, Settings, Download, X, UserPlus, Trash2, LogOut, UserCheck, Shield, FileText, Calendar, Brain, Wrench } from 'lucide-react';
-import { TimeEntry, TimeEntryFilters, DashboardStats, User, Job, JobAssignment } from './types';
+import { TimeEntry, TimeEntryFilters, DashboardStats, User, Job, JobAssignment, WorkOrder } from './types';
 import { api } from './services/api';
 import DashboardStatsComponent from './components/DashboardStats';
 import TimeEntryFiltersComponent from './components/TimeEntryFilters';
@@ -9,6 +9,8 @@ import { LoginForm } from './components/LoginForm';
 import Reports from './components/Reports';
 import JobCalendar from './components/JobCalendar';
 import JobNotesModal from './components/JobNotesModal';
+import { WorkOrders } from './components/WorkOrders';
+import { WorkOrderModal } from './components/WorkOrderModal';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { formatDate, formatTime } from './utils/timeUtils';
 
@@ -22,7 +24,7 @@ function AppContent() {
   const [assignments, setAssignments] = useState<JobAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'calendar' | 'reports'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'calendar' | 'reports' | 'workorders'>('dashboard');
   const [showSettings, setShowSettings] = useState(false);
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [showReports, setShowReports] = useState(false);
@@ -34,6 +36,7 @@ function AppContent() {
   const [clearingDatabase, setClearingDatabase] = useState(false);
   const [showClearDatabaseConfirm, setShowClearDatabaseConfirm] = useState(false);
   const [deletingEntry, setDeletingEntry] = useState<string | null>(null);
+  const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
 
   // Clear data when user logs out
   useEffect(() => {
@@ -212,6 +215,72 @@ function AppContent() {
       techniciansWorking,
     };
   }, [timeEntries]);
+
+  // Generate work orders from job assignments and time entries
+  const workOrders = useMemo(() => {
+    const workOrders: WorkOrder[] = [];
+    
+    assignments.forEach(assignment => {
+      // Find the associated job
+      const job = jobs.find(j => j.id === assignment.jobId);
+      if (!job) return;
+      
+      // Find all time entries for this job assignment
+      const relatedTimeEntries = timeEntries.filter(entry => 
+        entry.jobAssignmentId === assignment.id || 
+        (entry.jobId === assignment.jobId && entry.technicianName === assignment.technicianName)
+      );
+      
+      // Calculate totals
+      const totalWorkHours = relatedTimeEntries.reduce((total, entry) => {
+        if (entry.duration) return total + entry.duration;
+        return total;
+      }, 0);
+      
+      const totalDriveHours = relatedTimeEntries.reduce((total, entry) => {
+        if (entry.driveDuration) return total + entry.driveDuration;
+        return total;
+      }, 0);
+      
+      const totalLunchHours = relatedTimeEntries.reduce((total, entry) => {
+        if (entry.lunchDuration) return total + entry.lunchDuration;
+        return total;
+      }, 0);
+      
+      // Combine all AI summaries
+      const allSummaries = relatedTimeEntries
+        .filter(entry => entry.aiSummary)
+        .map(entry => entry.aiSummary)
+        .join('\n\n');
+      
+      const workOrder: WorkOrder = {
+        id: `wo-${assignment.id}`,
+        jobId: assignment.jobId,
+        jobAssignmentId: assignment.id,
+        customerName: job.customerName,
+        jobDescription: job.description,
+        location: job.location,
+        technicianName: assignment.technicianName,
+        assignedDate: assignment.assignedDate,
+        estimatedHours: assignment.assignedHours,
+        actualHours: assignment.actualHours,
+        priority: job.priority,
+        status: assignment.status,
+        timeEntries: relatedTimeEntries,
+        totalWorkHours,
+        totalDriveHours,
+        totalLunchHours,
+        workSummary: allSummaries || undefined,
+        notes: assignment.notes,
+        createdAt: assignment.createdAt,
+        updatedAt: assignment.updatedAt
+      };
+      
+      workOrders.push(workOrder);
+    });
+    
+    return workOrders.sort((a, b) => new Date(b.assignedDate).getTime() - new Date(a.assignedDate).getTime());
+  }, [assignments, jobs, timeEntries]);
 
   // Get unique technician and customer names for filters
   const technicianNames = useMemo(() => 
@@ -622,6 +691,21 @@ function AppContent() {
     }
   };
 
+  // Work Order handlers
+  const handleViewWorkOrder = (workOrder: WorkOrder) => {
+    setSelectedWorkOrder(workOrder);
+  };
+
+  const handleEditWorkOrder = (workOrder: WorkOrder) => {
+    // TODO: Implement work order editing
+    alert('Work order editing will be implemented soon');
+  };
+
+  const handleExportWorkOrder = (workOrder: WorkOrder) => {
+    // TODO: Implement PDF export
+    alert('PDF export will be implemented soon');
+  };
+
   // Handle authentication loading
   if (authState.isLoading) {
     return (
@@ -776,65 +860,13 @@ function AppContent() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {currentView === 'dashboard' && (
-          <>
-            {/* Dashboard Stats */}
-            <DashboardStatsComponent stats={dashboardStats} />
-
-            {/* Filters */}
-            <TimeEntryFiltersComponent
-              filters={filters}
-              onFiltersChange={setFilters}
-              technicianNames={technicianNames}
-              customerNames={customerNames}
-            />
-
-            {/* Results Summary */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Time Entries ({filteredEntries.length})
-                </h2>
-                <div className="text-sm text-gray-500">
-                  Showing {filteredEntries.length} of {timeEntries.length} entries
-                </div>
-              </div>
-            </div>
-
-            {/* Time Entries */}
-            <div className="space-y-8">
-              {Object.entries(groupedEntries).map(([dateKey, entries]) => (
-                <div key={dateKey}>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    {dateKey === 'Unknown' ? 'Unknown Date' : formatDate(new Date(dateKey))}
-                  </h3>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {entries.map((entry) => (
-                      <TimeEntryCard
-                        key={entry.id}
-                        entry={entry}
-                        onClick={() => setSelectedEntryForNotes(entry)}
-                        onDelete={handleDeleteEntry}
-                        isDeleting={deletingEntry === entry.id}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-
-              {filteredEntries.length === 0 && !loading && (
-                <div className="text-center py-12">
-                  <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No time entries found</h3>
-                  <p className="text-gray-500">
-                    {timeEntries.length === 0 
-                      ? "No time entries in database. Add some entries to get started."
-                      : "Try adjusting your filters to see more results."
-                    }
-                  </p>
-                </div>
-              )}
-            </div>
-          </>
+          <WorkOrders
+            workOrders={workOrders}
+            onViewWorkOrder={handleViewWorkOrder}
+            onEditWorkOrder={handleEditWorkOrder}
+            onExportWorkOrder={handleExportWorkOrder}
+            isLoading={loading}
+          />
         )}
 
         {currentView === 'calendar' && authState.user?.role === 'admin' && (
@@ -861,6 +893,16 @@ function AppContent() {
           <JobNotesModal
             entry={selectedEntryForNotes}
             onClose={() => setSelectedEntryForNotes(null)}
+          />
+        )}
+
+        {/* Work Order Modal */}
+        {selectedWorkOrder && (
+          <WorkOrderModal
+            workOrder={selectedWorkOrder}
+            onClose={() => setSelectedWorkOrder(null)}
+            onEdit={handleEditWorkOrder}
+            onExport={handleExportWorkOrder}
           />
         )}
       </main>

@@ -193,4 +193,39 @@ export interface JobNotes {
   isShared: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Work Order system types
+export interface WorkOrder {
+  id: string;
+  jobId: string;
+  jobAssignmentId: string;
+  customerName: string;
+  jobDescription?: string;
+  location?: string;
+  technicianName: string;
+  assignedDate: Date;
+  estimatedHours: number;
+  actualHours?: number;
+  priority: 'low' | 'medium' | 'high';
+  status: 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+  timeEntries: TimeEntry[];
+  totalWorkHours?: number;
+  totalDriveHours?: number;
+  totalLunchHours?: number;
+  workSummary?: string;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface WorkOrderFilters {
+  technicianName?: string;
+  customerName?: string;
+  status?: WorkOrder['status'][];
+  priority?: WorkOrder['priority'][];
+  dateRange?: {
+    start: Date;
+    end: Date;
+  };
 } 
