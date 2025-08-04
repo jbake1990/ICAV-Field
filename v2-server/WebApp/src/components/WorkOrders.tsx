@@ -39,9 +39,9 @@ export const WorkOrders: React.FC<WorkOrdersProps> = ({
         if (!filters.status.includes(workOrder.status)) return false;
       }
 
-      // Priority filter
-      if (filters.priority && filters.priority.length > 0) {
-        if (!filters.priority.includes(workOrder.priority)) return false;
+      // Job Type filter
+      if (filters.jobType && filters.jobType.length > 0) {
+        if (!filters.jobType.includes(workOrder.jobType)) return false;
       }
 
       // Technician filter
@@ -74,11 +74,11 @@ export const WorkOrders: React.FC<WorkOrdersProps> = ({
     }
   };
 
-  const getPriorityColor = (priority: WorkOrder['priority']) => {
-    switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-green-100 text-green-800 border-green-200';
+  const getJobTypeColor = (jobType: WorkOrder['jobType']) => {
+    switch (jobType) {
+      case 'quoted': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'service': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'bench': return 'bg-blue-100 text-blue-800 border-blue-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
@@ -162,19 +162,19 @@ export const WorkOrders: React.FC<WorkOrdersProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Job Type</label>
                 <select
-                  value={filters.priority?.join(',') || ''}
+                  value={filters.jobType?.join(',') || ''}
                   onChange={(e) => {
                     const values = e.target.value ? e.target.value.split(',') : [];
-                    setFilters(prev => ({ ...prev, priority: values as WorkOrder['priority'][] }));
+                    setFilters(prev => ({ ...prev, jobType: values as WorkOrder['jobType'][] }));
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="">All Priorities</option>
-                  <option value="high">High</option>
-                  <option value="medium">Medium</option>
-                  <option value="low">Low</option>
+                  <option value="">All Job Types</option>
+                  <option value="quoted">Quoted Job</option>
+                  <option value="service">Service</option>
+                  <option value="bench">Bench</option>
                 </select>
               </div>
 
@@ -223,8 +223,8 @@ export const WorkOrders: React.FC<WorkOrdersProps> = ({
                       <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(workOrder.status)}`}>
                         {workOrder.status.replace('_', ' ')}
                       </span>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getPriorityColor(workOrder.priority)}`}>
-                        {workOrder.priority}
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getJobTypeColor(workOrder.jobType)}`}>
+                        {workOrder.jobType}
                       </span>
                     </div>
 

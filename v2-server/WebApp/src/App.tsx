@@ -81,7 +81,7 @@ function AppContent() {
       const formattedJobs: Job[] = apiJobs.map(job => ({
         ...job,
         status: job.status as Job['status'],
-        priority: job.priority as Job['priority'],
+        jobType: (job as any).jobType || (job as any).priority || 'service' as Job['jobType'],
         createdAt: new Date(job.createdAt),
         updatedAt: new Date(job.updatedAt)
       }));
@@ -264,7 +264,7 @@ function AppContent() {
         assignedDate: assignment.assignedDate,
         estimatedHours: assignment.assignedHours,
         actualHours: assignment.actualHours,
-        priority: job.priority,
+        jobType: job.jobType,
         status: assignment.status,
         timeEntries: relatedTimeEntries,
         totalWorkHours,

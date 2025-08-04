@@ -140,7 +140,7 @@ export interface Job {
   location?: string;
   estimatedHours: number;
   status: JobStatus;
-  priority: 'low' | 'medium' | 'high';
+  jobType: 'quoted' | 'service' | 'bench';
   createdAt: Date;
   updatedAt: Date;
   createdBy: string; // User ID who created the job
@@ -207,7 +207,7 @@ export interface WorkOrder {
   assignedDate: Date;
   estimatedHours: number;
   actualHours?: number;
-  priority: 'low' | 'medium' | 'high';
+  jobType: 'quoted' | 'service' | 'bench';
   status: 'assigned' | 'in_progress' | 'completed' | 'cancelled';
   timeEntries: TimeEntry[];
   totalWorkHours?: number;
@@ -223,7 +223,7 @@ export interface WorkOrderFilters {
   technicianName?: string;
   customerName?: string;
   status?: WorkOrder['status'][];
-  priority?: WorkOrder['priority'][];
+  jobType?: WorkOrder['jobType'][];
   dateRange?: {
     start: Date;
     end: Date;

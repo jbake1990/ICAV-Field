@@ -47,14 +47,14 @@ export default function JobCalendar({
     customerName: string;
     description: string;
     location: string;
-    priority: 'low' | 'medium' | 'high';
+    jobType: 'quoted' | 'service' | 'bench';
     status: JobStatus;
     estimatedHours: number;
   }>({
     customerName: '',
     description: '',
     location: '',
-    priority: 'medium',
+    jobType: 'service',
     status: 'draft',
     estimatedHours: 8
   });
@@ -297,7 +297,7 @@ export default function JobCalendar({
         description: newJob.description,
         location: newJob.location,
         estimatedHours: newJob.estimatedHours,
-        priority: newJob.priority,
+        jobType: newJob.jobType,
         status: newJob.status,
         createdBy: 'admin'
       };
@@ -310,7 +310,7 @@ export default function JobCalendar({
         customerName: '',
         description: '',
         location: '',
-        priority: 'medium',
+        jobType: 'service',
         status: 'draft',
         estimatedHours: 8
       });
@@ -456,9 +456,9 @@ export default function JobCalendar({
                 <div
                   key={job.id}
                   className={`p-3 border rounded-lg hover:shadow-md transition-shadow ${
-                    job.priority === 'high' ? 'bg-red-50 border-red-200' :
-                    job.priority === 'medium' ? 'bg-yellow-50 border-yellow-200' :
-                    'bg-green-50 border-green-200'
+                    job.jobType === 'quoted' ? 'bg-orange-50 border-orange-200' :
+                    job.jobType === 'service' ? 'bg-yellow-50 border-yellow-200' :
+                    'bg-blue-50 border-blue-200'
                   }`}
                 >
                   <div 
@@ -467,32 +467,32 @@ export default function JobCalendar({
                     className="cursor-move"
                   >
                     <div className={`font-medium text-sm ${
-                      job.priority === 'high' ? 'text-red-900' :
-                      job.priority === 'medium' ? 'text-yellow-900' :
-                      'text-green-900'
+                      job.jobType === 'quoted' ? 'text-orange-900' :
+                      job.jobType === 'service' ? 'text-yellow-900' :
+                      'text-blue-900'
                     }`}>{job.title}</div>
                     <div className={`text-xs ${
-                      job.priority === 'high' ? 'text-red-700' :
-                      job.priority === 'medium' ? 'text-yellow-700' :
-                      'text-green-700'
+                      job.jobType === 'quoted' ? 'text-orange-700' :
+                      job.jobType === 'service' ? 'text-yellow-700' :
+                      'text-blue-700'
                     }`}>{job.customerName}</div>
                     <div className="flex items-center justify-between mt-2">
                       <div className="text-xs">
                         <span className={`font-medium ${
-                          job.priority === 'high' ? 'text-red-600' :
-                          job.priority === 'medium' ? 'text-yellow-600' :
-                          'text-green-600'
+                          job.jobType === 'quoted' ? 'text-orange-600' :
+                          job.jobType === 'service' ? 'text-yellow-600' :
+                          'text-blue-600'
                         }`}>{remainingHours}h remaining</span>
                         {assignedHours > 0 && (
                           <span className="text-gray-500 ml-1">({assignedHours}h assigned)</span>
                         )}
                       </div>
                       <span className={`text-xs px-2 py-1 rounded ${
-                        job.priority === 'high' ? 'bg-red-100 text-red-700' :
-                        job.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-green-100 text-green-700'
+                        job.jobType === 'quoted' ? 'bg-orange-100 text-orange-700' :
+                        job.jobType === 'service' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-blue-100 text-blue-700'
                       }`}>
-                        {job.priority}
+                        {job.jobType}
                       </span>
                     </div>
                   </div>
@@ -587,9 +587,9 @@ export default function JobCalendar({
                               className={`p-1 border rounded text-xs transition-colors cursor-move ${
                                 draggedAssignment?.assignmentId === assignment.id ? 'opacity-50' : ''
                               } ${
-                                job.priority === 'high' ? 'bg-red-100 border-red-200' :
-                                job.priority === 'medium' ? 'bg-yellow-100 border-yellow-200' :
-                                'bg-green-100 border-green-200'
+                                job.jobType === 'quoted' ? 'bg-orange-100 border-orange-200' :
+                                job.jobType === 'service' ? 'bg-yellow-100 border-yellow-200' :
+                                'bg-blue-100 border-blue-200'
                               }`}
                               draggable
                               onDragStart={(e) => handleAssignmentDragStart(e, assignment, job)}
@@ -600,20 +600,20 @@ export default function JobCalendar({
                               <div className="flex items-center justify-between">
                                 <div className="flex-1 min-w-0">
                                   <div className={`font-medium truncate ${
-                                    job.priority === 'high' ? 'text-red-900' :
-                                    job.priority === 'medium' ? 'text-yellow-900' :
-                                    'text-green-900'
+                                    job.jobType === 'quoted' ? 'text-orange-900' :
+                                    job.jobType === 'service' ? 'text-yellow-900' :
+                                    'text-blue-900'
                                   }`}>{job.customerName}</div>
                                   <div className="flex items-center justify-between">
                                     <div className={`truncate flex-1 ${
-                                      job.priority === 'high' ? 'text-red-700' :
-                                      job.priority === 'medium' ? 'text-yellow-700' :
-                                      'text-green-700'
+                                      job.jobType === 'quoted' ? 'text-orange-700' :
+                                      job.jobType === 'service' ? 'text-yellow-700' :
+                                      'text-blue-700'
                                     }`}>{job.location}</div>
                                     <div className={`font-semibold ml-1 ${
-                                      job.priority === 'high' ? 'text-red-600' :
-                                      job.priority === 'medium' ? 'text-yellow-600' :
-                                      'text-green-600'
+                                      job.jobType === 'quoted' ? 'text-orange-600' :
+                                      job.jobType === 'service' ? 'text-yellow-600' :
+                                      'text-blue-600'
                                     }`}>{assignment.assignedHours}h</div>
                                   </div>
                                 </div>
@@ -825,16 +825,16 @@ export default function JobCalendar({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Priority
+                  Job Type
                 </label>
                 <select
-                  value={newJob.priority}
-                  onChange={(e) => setNewJob({ ...newJob, priority: e.target.value as 'low' | 'medium' | 'high' })}
+                  value={newJob.jobType}
+                  onChange={(e) => setNewJob({ ...newJob, jobType: e.target.value as 'quoted' | 'service' | 'bench' })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
+                  <option value="quoted">Quoted Job</option>
+                  <option value="service">Service</option>
+                  <option value="bench">Bench</option>
                 </select>
               </div>
             </div>

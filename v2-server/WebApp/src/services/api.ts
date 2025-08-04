@@ -66,7 +66,7 @@ export interface ApiJob {
   location?: string;
   estimatedHours: number;
   status: string;
-  priority: string;
+  jobType: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -290,7 +290,7 @@ export const api = {
     description?: string;
     location?: string;
     estimatedHours: number;
-    priority?: string;
+    jobType?: string;
     status?: string;
   }): Promise<ApiJob> {
     const url = `${API_BASE_URL}/api/jobs`;
@@ -315,7 +315,7 @@ export const api = {
     description: string;
     location: string;
     estimatedHours: number;
-    priority: string;
+    jobType: string;
     status: string;
   }>): Promise<ApiJob> {
     const url = `${API_BASE_URL}/api/jobs?id=${encodeURIComponent(jobId)}`;

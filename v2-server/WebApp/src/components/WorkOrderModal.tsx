@@ -41,11 +41,11 @@ export const WorkOrderModal: React.FC<WorkOrderModalProps> = ({
     }
   };
 
-  const getPriorityColor = (priority: WorkOrder['priority']) => {
-    switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-green-100 text-green-800 border-green-200';
+  const getJobTypeColor = (jobType: WorkOrder['jobType']) => {
+    switch (jobType) {
+      case 'quoted': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'service': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'bench': return 'bg-blue-100 text-blue-800 border-blue-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
@@ -148,9 +148,9 @@ export const WorkOrderModal: React.FC<WorkOrderModalProps> = ({
                   </div>
                   
                   <div className="flex items-center space-x-3">
-                    <span className="text-sm text-gray-600">Priority:</span>
-                    <span className={`px-3 py-1 text-sm font-medium rounded-full border ${getPriorityColor(workOrder.priority)}`}>
-                      {workOrder.priority}
+                    <span className="text-sm text-gray-600">Job Type:</span>
+                    <span className={`px-3 py-1 text-sm font-medium rounded-full border ${getJobTypeColor(workOrder.jobType)}`}>
+                      {workOrder.jobType}
                     </span>
                   </div>
                   
