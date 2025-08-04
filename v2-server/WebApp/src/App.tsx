@@ -78,13 +78,28 @@ function AppContent() {
         driveEndTime: entry.driveEndTime ? new Date(entry.driveEndTime) : undefined,
       }));
 
-      const formattedJobs: Job[] = apiJobs.map(job => ({
-        ...job,
-        status: job.status as Job['status'],
-        jobType: (job as any).jobType || (job as any).priority || 'service' as Job['jobType'],
-        createdAt: new Date(job.createdAt),
-        updatedAt: new Date(job.updatedAt)
-      }));
+      const formattedJobs: Job[] = apiJobs.map(job => {
+        // Handle both new jobType and old priority fields
+        let jobType: Job['jobType'] = 'service'; // default
+        
+        if ((job as any).jobType) {
+          jobType = (job as any).jobType as Job['jobType'];
+        } else if ((job as any).priority) {
+          // Map old priority values to new job types
+          const priority = (job as any).priority;
+          if (priority === 'high') jobType = 'quoted';
+          else if (priority === 'medium') jobType = 'service';
+          else if (priority === 'low') jobType = 'bench';
+        }
+        
+        return {
+          ...job,
+          status: job.status as Job['status'],
+          jobType,
+          createdAt: new Date(job.createdAt),
+          updatedAt: new Date(job.updatedAt)
+        };
+      });
 
       const formattedAssignments: JobAssignment[] = apiAssignments.map(assignment => ({
         ...assignment,
@@ -583,7 +598,7 @@ function AppContent() {
       const formattedJob: Job = {
         ...newJob,
         status: newJob.status as Job['status'],
-        jobType: (newJob as any).jobType || (newJob as any).priority || 'service' as Job['jobType'],
+        jobType: (newJob as any).jobType || 'service' as Job['jobType'],
         createdAt: new Date(newJob.createdAt),
         updatedAt: new Date(newJob.updatedAt)
       };
