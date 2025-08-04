@@ -583,7 +583,7 @@ function AppContent() {
       const formattedJob: Job = {
         ...newJob,
         status: newJob.status as Job['status'],
-        priority: newJob.priority as Job['priority'],
+        jobType: (newJob as any).jobType || (newJob as any).priority || 'service' as Job['jobType'],
         createdAt: new Date(newJob.createdAt),
         updatedAt: new Date(newJob.updatedAt)
       };
