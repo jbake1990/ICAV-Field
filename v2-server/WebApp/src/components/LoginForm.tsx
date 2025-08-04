@@ -104,14 +104,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, isLoading, error 
             </button>
           </form>
 
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Demo Accounts:</h3>
-            <div className="text-xs text-gray-600 space-y-1">
-              <div><strong>Admin:</strong> admin / admin123</div>
-              <div><strong>Tech:</strong> john.doe / tech123</div>
-            </div>
-          </div>
+
         </div>
       </div>
     </div>
