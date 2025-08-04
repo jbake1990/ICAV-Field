@@ -72,6 +72,7 @@ async function handleGetJobs(req, res, user) {
           location,
           estimated_hours,
           status,
+          job_type,
           priority,
           created_by,
           created_at,
@@ -90,6 +91,7 @@ async function handleGetJobs(req, res, user) {
           j.location,
           j.estimated_hours,
           j.status,
+          j.job_type,
           j.priority,
           j.created_by,
           j.created_at,
@@ -112,7 +114,8 @@ async function handleGetJobs(req, res, user) {
       location: row.location,
       estimatedHours: parseFloat(row.estimated_hours),
       status: row.status,
-      priority: row.priority,
+      jobType: row.job_type || row.priority, // Use job_type if available, fallback to priority
+      priority: row.priority, // Keep for backward compatibility
       createdBy: row.created_by,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at)
@@ -134,7 +137,8 @@ async function handleCreateJob(req, res, user) {
       description, 
       location, 
       estimatedHours, 
-      priority = 'medium',
+      jobType = 'service',
+      priority = 'medium', // Keep for backward compatibility
       status = 'draft'
     } = req.body;
 
@@ -150,6 +154,7 @@ async function handleCreateJob(req, res, user) {
         location,
         estimated_hours,
         status,
+        job_type,
         priority,
         created_by
       ) VALUES (
@@ -159,6 +164,7 @@ async function handleCreateJob(req, res, user) {
         ${location || null},
         ${estimatedHours || 0},
         ${status}::job_status,
+        ${jobType}::text,
         ${priority}::job_priority,
         ${user.user_id}
       )
@@ -175,7 +181,8 @@ async function handleCreateJob(req, res, user) {
       location: newJob.location,
       estimatedHours: parseFloat(newJob.estimated_hours),
       status: newJob.status,
-      priority: newJob.priority,
+      jobType: newJob.job_type || newJob.priority, // Use job_type if available, fallback to priority
+      priority: newJob.priority, // Keep for backward compatibility
       createdBy: newJob.created_by,
       createdAt: new Date(newJob.created_at),
       updatedAt: new Date(newJob.updated_at)
