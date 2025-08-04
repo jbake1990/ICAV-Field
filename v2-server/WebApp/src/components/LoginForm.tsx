@@ -28,7 +28,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, isLoading, error 
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
             <User className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">ICAV Time Tracker</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">ICAV Field Management</h1>
           <p className="text-slate-400">Sign in to access the dashboard</p>
         </div>
 

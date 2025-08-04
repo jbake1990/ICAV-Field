@@ -403,7 +403,7 @@ function AppContent() {
             <div className="flex items-center space-x-4">
               <Clock className="w-8 h-8 text-primary-600" />
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">ICAV Time Tracker</h1>
+                <h1 className="text-lg sm:text-xl font-semibold text-gray-900">ICAV Field Management</h1>
                 <p className="text-sm text-gray-500">Office Dashboard</p>
               </div>
             </div>
