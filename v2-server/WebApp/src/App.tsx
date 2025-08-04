@@ -82,14 +82,21 @@ function AppContent() {
         // Handle both new jobType and old priority fields
         let jobType: Job['jobType'] = 'service'; // default
         
+        console.log('Processing job:', job.id, 'Raw job data:', job);
+        
         if ((job as any).jobType) {
           jobType = (job as any).jobType as Job['jobType'];
+          console.log('Using jobType:', jobType);
         } else if ((job as any).priority) {
           // Map old priority values to new job types
           const priority = (job as any).priority;
+          console.log('Found priority:', priority);
           if (priority === 'high') jobType = 'quoted';
           else if (priority === 'medium') jobType = 'service';
           else if (priority === 'low') jobType = 'bench';
+          console.log('Mapped to jobType:', jobType);
+        } else {
+          console.log('No jobType or priority found, using default:', jobType);
         }
         
         return {
