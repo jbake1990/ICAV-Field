@@ -249,8 +249,7 @@ function AppContent() {
       
       // Find all time entries for this job assignment
       const relatedTimeEntries = timeEntries.filter(entry => 
-        entry.jobAssignmentId === assignment.id || 
-        (entry.jobId === assignment.jobId && entry.technicianName === assignment.technicianName)
+        entry.jobId === assignment.jobId && entry.technicianName === assignment.technicianName
       );
       
       // Calculate totals
