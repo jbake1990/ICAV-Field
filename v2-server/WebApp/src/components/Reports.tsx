@@ -827,7 +827,7 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
                         <div className="mb-3">
                           <div className="text-sm font-medium text-gray-700 mb-1">Technicians:</div>
                           <div className="flex flex-wrap gap-2">
-                            {lunchSearchData[0].technicians.map((tech: string) => (
+                            {lunchSearchData[0].technicians.map((tech) => (
                               <span key={tech} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
                                 {tech}
                               </span>
@@ -848,7 +848,7 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
                               </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                              {lunchSearchData[0].entries.map((entry: TimeEntry) => (
+                              {lunchSearchData[0].entries.map((entry) => (
                                 <tr key={entry.id} className="hover:bg-gray-50">
                                   <td className="px-4 py-3 text-sm text-gray-900">{entry.technicianName}</td>
                                   <td className="px-4 py-3 text-sm text-gray-900">{entry.customerName}</td>
@@ -867,7 +867,7 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
                           </table>
                         </div>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               )}
