@@ -807,19 +807,19 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
                           <div>
-                            <div className="font-medium text-gray-900">{lunch.totalLunchHours.toFixed(2)}</div>
+                            <div className="font-medium text-gray-900">{lunchSearchData[0].totalLunchHours.toFixed(2)}</div>
                             <div className="text-gray-500">Total Lunch Hours</div>
                           </div>
                           <div>
-                            <div className="font-medium text-gray-900">{lunch.averageLunchDuration.toFixed(2)}</div>
+                            <div className="font-medium text-gray-900">{lunchSearchData[0].averageLunchDuration.toFixed(2)}</div>
                             <div className="text-gray-500">Avg Lunch Duration</div>
                           </div>
                           <div>
-                            <div className="font-medium text-gray-900">{lunch.technicians.length}</div>
+                            <div className="font-medium text-gray-900">{lunchSearchData[0].technicians.length}</div>
                             <div className="text-gray-500">Technicians</div>
                           </div>
                           <div>
-                            <div className="font-medium text-gray-900">{lunch.entries.length}</div>
+                            <div className="font-medium text-gray-900">{lunchSearchData[0].entries.length}</div>
                             <div className="text-gray-500">Entries</div>
                           </div>
                         </div>
@@ -827,7 +827,7 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
                         <div className="mb-3">
                           <div className="text-sm font-medium text-gray-700 mb-1">Technicians:</div>
                           <div className="flex flex-wrap gap-2">
-                            {lunch.technicians.map(tech => (
+                            {lunchSearchData[0].technicians.map((tech: string) => (
                               <span key={tech} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
                                 {tech}
                               </span>
@@ -848,7 +848,7 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
                               </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                              {lunch.entries.map((entry) => (
+                              {lunchSearchData[0].entries.map((entry: TimeEntry) => (
                                 <tr key={entry.id} className="hover:bg-gray-50">
                                   <td className="px-4 py-3 text-sm text-gray-900">{entry.technicianName}</td>
                                   <td className="px-4 py-3 text-sm text-gray-900">{entry.customerName}</td>
@@ -877,4 +877,4 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
       </div>
     </div>
   );
-} 
+}
