@@ -98,9 +98,17 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
       entry.technicianName.toLowerCase().includes(selectedTechnician.toLowerCase())
     );
 
+    // Filter by selected date for tech search
+    const dateFilteredEntries = searchMode === 'tech' 
+      ? techEntries.filter(entry => {
+          const entryDate = entry.clockInTime || entry.driveStartTime;
+          return entryDate && entryDate.toDateString() === selectedDate.toDateString();
+        })
+      : techEntries;
+
     const techMap = new Map<string, TechSearchData>();
     
-    techEntries.forEach(entry => {
+    dateFilteredEntries.forEach(entry => {
       if (!techMap.has(entry.technicianName)) {
         techMap.set(entry.technicianName, {
           technicianName: entry.technicianName,
@@ -129,7 +137,7 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
     });
 
     return Array.from(techMap.values());
-  }, [filteredEntries, selectedTechnician]);
+  }, [filteredEntries, selectedTechnician, selectedDate, searchMode]);
 
   // Customer Search Data
   const customerSearchData = useMemo((): CustomerSearchData[] => {
