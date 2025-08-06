@@ -83,16 +83,18 @@ export const WorkOrders: React.FC<WorkOrdersProps> = ({
     }
   };
 
-  const formatDuration = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
+  const formatDuration = (milliseconds: number) => {
+    const totalMinutes = Math.floor(milliseconds / (1000 * 60));
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
     return `${hours}h ${mins}m`;
   };
 
   const calculateTotalHours = (timeEntries: TimeEntry[]) => {
     return timeEntries.reduce((total, entry) => {
       if (entry.duration) {
-        return total + entry.duration;
+        // Convert milliseconds to hours
+        return total + (entry.duration / (1000 * 60 * 60));
       }
       return total;
     }, 0);
