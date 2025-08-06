@@ -279,7 +279,7 @@ module.exports = async function handler(req, res) {
         aiSummary: req.body.aiSummary
       });
       
-      const { id, technicianName, customerName, clockInTime, clockOutTime, lunchStartTime, lunchEndTime, driveStartTime, driveEndTime, jobNotes, aiSummary } = req.body;
+      const { id, technicianName, customerName, clockInTime, clockOutTime, lunchStartTime, lunchEndTime, driveStartTime, driveEndTime, jobNotes, aiSummary, jobId } = req.body;
 
       // Determine the target user ID for the entry
       // Admins can specify any user ID, regular users can only use their own
@@ -322,6 +322,7 @@ module.exports = async function handler(req, res) {
               user_id = ${targetUserId},
               technician_name = ${technicianName},
               customer_name = ${customerName}, 
+              job_id = ${jobId || null},
               clock_in_time = ${clockInTime},
               clock_out_time = ${clockOutTime},
               lunch_start_time = ${lunchStartTime},
@@ -348,6 +349,7 @@ module.exports = async function handler(req, res) {
               userId: updateRows[0].user_id,
               technicianName: updateRows[0].technician_name,
               customerName: updateRows[0].customer_name,
+              jobId: updateRows[0].job_id || null,
               clockInTime: updateRows[0].clock_in_time,
               clockOutTime: updateRows[0].clock_out_time,
               lunchStartTime: updateRows[0].lunch_start_time,
@@ -427,6 +429,7 @@ module.exports = async function handler(req, res) {
           user_id, 
           technician_name, 
           customer_name, 
+          job_id,
           clock_in_time, 
           clock_out_time, 
           lunch_start_time, 
@@ -440,6 +443,7 @@ module.exports = async function handler(req, res) {
           ${targetUserId}, 
           ${technicianName}, 
           ${customerName}, 
+          ${jobId || null},
           ${clockInTime}, 
           ${clockOutTime}, 
           ${lunchStartTime}, 
@@ -460,6 +464,7 @@ module.exports = async function handler(req, res) {
         userId: rows[0].user_id,
         technicianName: rows[0].technician_name,
         customerName: rows[0].customer_name,
+        jobId: rows[0].job_id || null,
         clockInTime: rows[0].clock_in_time,
         clockOutTime: rows[0].clock_out_time,
         lunchStartTime: rows[0].lunch_start_time,
