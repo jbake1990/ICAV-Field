@@ -276,6 +276,7 @@ export const WorkOrderModal: React.FC<WorkOrderModalProps> = ({
                 ))}
               </div>
             )}
+          </div>
 
           {/* Notes */}
           {workOrder.notes && (
