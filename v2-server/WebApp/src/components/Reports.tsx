@@ -174,9 +174,17 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
   const lunchSearchData = useMemo((): LunchSearchData[] => {
     const lunchEntries = filteredEntries.filter(entry => entry.lunchDuration && entry.lunchDuration > 0);
     
+    // Filter by selected date for lunch search
+    const dateFilteredEntries = searchMode === 'lunch' 
+      ? lunchEntries.filter(entry => {
+          const entryDate = entry.clockInTime || entry.driveStartTime;
+          return entryDate && entryDate.toDateString() === selectedDate.toDateString();
+        })
+      : lunchEntries;
+    
     const lunchMap = new Map<string, LunchSearchData>();
     
-    lunchEntries.forEach(entry => {
+    dateFilteredEntries.forEach(entry => {
       const date = entry.clockInTime || entry.driveStartTime;
       if (!date) return;
       
@@ -207,7 +215,7 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
     });
 
     return Array.from(lunchMap.values()).sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [filteredEntries]);
+  }, [filteredEntries, searchMode, selectedDate]);
 
   // Get entries for selected date (for mini calendar)
   const selectedDateEntries = useMemo(() => {
@@ -467,72 +475,85 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Filters</h3>
                 <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Date Range
-                    </label>
-                    <div className="space-y-2">
-                      <input
-                        type="date"
-                        value={filters.dateRange.start.toISOString().split('T')[0]}
-                        onChange={(e) => setFilters(prev => ({
-                          ...prev,
-                          dateRange: { ...prev.dateRange, start: new Date(e.target.value) }
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <input
-                        type="date"
-                        value={filters.dateRange.end.toISOString().split('T')[0]}
-                        onChange={(e) => setFilters(prev => ({
-                          ...prev,
-                          dateRange: { ...prev.dateRange, end: new Date(e.target.value) }
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
+                  {searchMode === 'customer' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Date Range
+                        </label>
+                        <div className="space-y-2">
+                          <input
+                            type="date"
+                            value={filters.dateRange.start.toISOString().split('T')[0]}
+                            onChange={(e) => setFilters(prev => ({
+                              ...prev,
+                              dateRange: { ...prev.dateRange, start: new Date(e.target.value) }
+                            }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <input
+                            type="date"
+                            value={filters.dateRange.end.toISOString().split('T')[0]}
+                            onChange={(e) => setFilters(prev => ({
+                              ...prev,
+                              dateRange: { ...prev.dateRange, end: new Date(e.target.value) }
+                            }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Customer
+                        </label>
+                        <select
+                          value={selectedCustomer}
+                          onChange={(e) => setSelectedCustomer(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Select Customer</option>
+                          {customers.map(customer => (
+                            <option key={customer} value={customer}>{customer}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
+                  )}
 
                   {searchMode === 'tech' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Technician
-                      </label>
-                      <select
-                        value={selectedTechnician}
-                        onChange={(e) => setSelectedTechnician(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select Technician</option>
-                        {technicians.map(tech => (
-                          <option key={tech} value={tech}>{tech}</option>
-                        ))}
-                      </select>
-                    </div>
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Technician
+                        </label>
+                        <select
+                          value={selectedTechnician}
+                          onChange={(e) => setSelectedTechnician(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Select Technician</option>
+                          {technicians.map(tech => (
+                            <option key={tech} value={tech}>{tech}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {selectedTechnician && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Select Date
+                          </label>
+                          <MiniCalendar onDateSelect={setSelectedDate} />
+                        </div>
+                      )}
+                    </>
                   )}
 
-                  {searchMode === 'customer' && (
+                  {searchMode === 'lunch' && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Customer
-                      </label>
-                      <select
-                        value={selectedCustomer}
-                        onChange={(e) => setSelectedCustomer(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select Customer</option>
-                        {customers.map(customer => (
-                          <option key={customer} value={customer}>{customer}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  {searchMode === 'tech' && selectedTechnician && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Mini Calendar
+                        Select Date
                       </label>
                       <MiniCalendar onDateSelect={setSelectedDate} />
                     </div>
@@ -771,15 +792,17 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
 
               {searchMode === 'lunch' && (
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Lunch Time Report</h3>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                    Lunch Time Report - {formatDate(selectedDate)}
+                  </h3>
                   
                   <div className="space-y-4">
-                    {lunchSearchData.map((lunch, index) => (
-                      <div key={index} className="bg-white border rounded-lg p-4">
+                    {lunchSearchData.length > 0 ? (
+                      <div className="bg-white border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-lg font-medium text-gray-900">{formatDate(lunch.date)}</h4>
+                          <h4 className="text-lg font-medium text-gray-900">{formatDate(selectedDate)}</h4>
                           <div className="text-sm text-gray-500">
-                            {lunch.technicians.length} technicians, {lunch.entries.length} entries
+                            {lunchSearchData[0].technicians.length} technicians, {lunchSearchData[0].entries.length} entries
                           </div>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">

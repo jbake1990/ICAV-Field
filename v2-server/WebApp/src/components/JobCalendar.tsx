@@ -234,31 +234,52 @@ export default function JobCalendar({
 
   // Handle drop for jobs (simplified - no time slots)
   const handleDrop = async (e: React.DragEvent, technicianId: string, date: Date) => {
-    if (!draggedJob) {
+    if (!draggedJob && !draggedAssignment) {
       return;
     }
     
     e.preventDefault();
     e.stopPropagation();
 
-    const { job, sourceType, sourceAssignmentId } = draggedJob;
-    
-    console.log('Drop event:', {
-      jobTitle: job.title,
-      technicianId,
-      date: date.toDateString(),
-      sourceType,
-      sourceAssignmentId
-    });
+    if (draggedJob) {
+      const { job, sourceType, sourceAssignmentId } = draggedJob;
+      
+      console.log('Drop event:', {
+        jobTitle: job.title,
+        technicianId,
+        date: date.toDateString(),
+        sourceType,
+        sourceAssignmentId
+      });
 
-    if (sourceType === 'unassigned') {
-      // Assign entire job to the day
-      await onAssignJob(job.id, technicianId, date);
-    } else if (sourceType === 'calendar' && sourceAssignmentId) {
-      // Move existing assignment to new tech/date
+      if (sourceType === 'unassigned') {
+        // Assign entire job to the day
+        await onAssignJob(job.id, technicianId, date);
+      } else if (sourceType === 'calendar' && sourceAssignmentId) {
+        // Move existing assignment to new tech/date
+        const technicianName = displayTechnicians.find(t => t.id === technicianId)?.displayName || '';
+        
+        await onUpdateAssignment(sourceAssignmentId, {
+          userId: technicianId,
+          assignedDate: date,
+          technicianName
+        });
+      }
+    } else if (draggedAssignment) {
+      // Handle moving existing assignment to new technician/date
+      const { assignmentId, job, assignment } = draggedAssignment;
       const technicianName = displayTechnicians.find(t => t.id === technicianId)?.displayName || '';
       
-      await onUpdateAssignment(sourceAssignmentId, {
+      console.log('Moving assignment:', {
+        assignmentId,
+        jobTitle: job.title,
+        fromTechnician: assignment.userId,
+        toTechnician: technicianId,
+        fromDate: assignment.assignedDate,
+        toDate: date
+      });
+      
+      await onUpdateAssignment(assignmentId, {
         userId: technicianId,
         assignedDate: date,
         technicianName
@@ -266,11 +287,12 @@ export default function JobCalendar({
     }
 
     setDraggedJob(null);
+    setDraggedAssignment(null);
   };
 
-  // Handle drag over for jobs
+  // Handle drag over for jobs and assignments
   const handleDragOver = (e: React.DragEvent) => {
-    if (draggedJob && !draggedTechnician) {
+    if ((draggedJob || draggedAssignment) && !draggedTechnician) {
       e.preventDefault();
       e.stopPropagation();
       e.dataTransfer.dropEffect = 'move';
@@ -570,7 +592,7 @@ export default function JobCalendar({
                     <div
                       key={`${technician.id}-${dayIndex}`}
                       className={`p-2 border-r border-gray-200 min-h-[120px] ${
-                        draggedJob ? 'bg-blue-50' : 'bg-white'
+                        (draggedJob || draggedAssignment) ? 'bg-blue-50' : 'bg-white'
                       }`}
                       onDragOver={handleDragOver}
                       onDrop={(e) => handleDrop(e, technician.id, day)}
@@ -584,18 +606,19 @@ export default function JobCalendar({
                           return (
                             <div
                               key={assignment.id}
-                              className={`p-1 border rounded text-xs transition-colors cursor-move ${
+                              className={`p-1 border rounded text-xs transition-colors cursor-move hover:shadow-md ${
                                 draggedAssignment?.assignmentId === assignment.id ? 'opacity-50' : ''
                               } ${
-                                job.jobType === 'quoted' ? 'bg-orange-100 border-orange-200' :
-                                job.jobType === 'service' ? 'bg-yellow-100 border-yellow-200' :
-                                'bg-blue-100 border-blue-200'
+                                job.jobType === 'quoted' ? 'bg-orange-100 border-orange-200 hover:bg-orange-200' :
+                                job.jobType === 'service' ? 'bg-yellow-100 border-yellow-200 hover:bg-yellow-200' :
+                                'bg-blue-100 border-blue-200 hover:bg-blue-200'
                               }`}
                               draggable
                               onDragStart={(e) => handleAssignmentDragStart(e, assignment, job)}
                               onDragOver={handleAssignmentDragOver}
                               onDrop={(e) => handleAssignmentDrop(e, assignment.id, technician.id, day)}
                               onDoubleClick={() => handleDoubleClickAssignment(assignment.id, assignment.assignedHours)}
+                              title="Drag to move to another technician or day"
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex-1 min-w-0">

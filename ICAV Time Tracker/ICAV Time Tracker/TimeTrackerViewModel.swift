@@ -439,7 +439,7 @@ class TimeTrackerViewModel: ObservableObject {
     }
     
     var pendingEntries: [TimeEntry] {
-        return timeEntries.filter { $0.needsSync && isWithinTwoDays($0) }
+        return timeEntries.filter { $0.needsSync && isWithinTwoDays($0) && $0.jobAssignmentId == nil }
     }
     
     // Filter entries to only show those from the last 2 days
@@ -713,7 +713,7 @@ class TimeTrackerViewModel: ObservableObject {
     }
     
     var pendingSyncCount: Int {
-        return timeEntries.filter { $0.needsSync }.count
+        return timeEntries.filter { $0.needsSync && $0.jobAssignmentId == nil }.count
     }
     
     func createJob(customerName: String) {
@@ -864,8 +864,7 @@ class TimeTrackerViewModel: ObservableObject {
                 jobId: job.id // Link to the actual job
             )
             
-            // Mark for sync
-            newEntry.markForSync()
+            // Don't mark job assignment entries for sync - they're read-only
             timeEntries.append(newEntry)
             
             print("✅ Created time entry for job assignment: \(newEntry.id)")

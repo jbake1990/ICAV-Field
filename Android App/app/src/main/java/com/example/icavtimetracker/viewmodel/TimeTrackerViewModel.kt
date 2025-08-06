@@ -790,8 +790,7 @@ class TimeTrackerViewModel(application: Application) : AndroidViewModel(applicat
                         jobId = job.id // Link to the actual job
                     )
                     
-                    // Mark for sync
-                    newEntry.markForSync()
+                    // Don't mark job assignment entries for sync - they're read-only
                     currentEntries.add(newEntry)
                     
                     Log.d("TimeTrackerViewModel", "Created time entry for job assignment: ${newEntry.id}")
@@ -841,8 +840,7 @@ class TimeTrackerViewModel(application: Application) : AndroidViewModel(applicat
                 // Set as current entry
                 _currentEntry.value = newEntry
                 
-                // Mark for sync
-                newEntry.markForSync()
+                // Don't mark job assignment entries for sync - they're read-only
                 updatePendingSyncCount()
                 
                 Log.d("TimeTrackerViewModel", "Created time entry for job assignment: ${newEntry.id}")
@@ -1149,7 +1147,7 @@ class TimeTrackerViewModel(application: Application) : AndroidViewModel(applicat
     
     private fun updatePendingSyncCount() {
         viewModelScope.launch(Dispatchers.Default) {
-            _pendingSyncCount.value = _timeEntries.value.count { it.needsSync }
+            _pendingSyncCount.value = _timeEntries.value.count { it.needsSync && it.jobAssignmentId == null }
         }
     }
     
