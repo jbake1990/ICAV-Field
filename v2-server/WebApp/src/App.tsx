@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Clock, Users, Settings, Download, X, UserPlus, Trash2, LogOut, UserCheck, Shield, FileText, Calendar, Brain, Wrench } from 'lucide-react';
+import { Clock, Users, Settings, Download, X, UserPlus, Trash2, LogOut, UserCheck, Shield, FileText, Calendar, Brain, Wrench, RefreshCw } from 'lucide-react';
 import { TimeEntry, TimeEntryFilters, DashboardStats, User, Job, JobAssignment, WorkOrder } from './types';
 import { api } from './services/api';
 import DashboardStatsComponent from './components/DashboardStats';
@@ -66,6 +66,20 @@ function AppContent() {
         api.getJobs(),
         api.getJobAssignments()
       ]);
+      
+      // Debug: Log time entries and their jobId values
+      console.log('Time Entries Debug:', {
+        totalEntries: apiEntries.length,
+        entriesWithJobId: apiEntries.filter(e => e.jobId).length,
+        entriesWithoutJobId: apiEntries.filter(e => !e.jobId).length,
+        sampleEntries: apiEntries.slice(0, 3).map(e => ({
+          id: e.id,
+          customerName: e.customerName,
+          technicianName: e.technicianName,
+          jobId: e.jobId,
+          hasJobId: !!e.jobId
+        }))
+      });
       
       // Convert API data to frontend format
       const formattedEntries: TimeEntry[] = apiEntries.map(entry => ({
@@ -249,8 +263,21 @@ function AppContent() {
       
       // Find all time entries for this job assignment
       const relatedTimeEntries = timeEntries.filter(entry => 
-        entry.jobId === assignment.jobId && entry.technicianName === assignment.technicianName
+        (entry.jobId === assignment.jobId && entry.technicianName === assignment.technicianName) ||
+        (entry.customerName === job.customerName && entry.technicianName === assignment.technicianName)
       );
+      
+      // Debug logging
+      console.log(`Work Order Debug for ${job.customerName}:`, {
+        jobId: assignment.jobId,
+        jobCustomerName: job.customerName,
+        technicianName: assignment.technicianName,
+        totalTimeEntries: timeEntries.length,
+        matchingEntries: relatedTimeEntries.length,
+        allEntriesForCustomer: timeEntries.filter(e => e.customerName === job.customerName).length,
+        allEntriesForTechnician: timeEntries.filter(e => e.technicianName === assignment.technicianName).length,
+        entriesWithJobId: timeEntries.filter(e => e.jobId === assignment.jobId).length
+      });
       
       // Calculate totals
       const totalWorkHours = relatedTimeEntries.reduce((total, entry) => {
@@ -727,6 +754,33 @@ function AppContent() {
     alert('PDF export will be implemented soon');
   };
 
+  const handleUpdateTimeEntryJobAssociations = async () => {
+    try {
+      const response = await fetch('/api/update-time-entries-job-associations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Job associations updated:', result);
+        alert(`Updated ${result.updatedCount} time entries with job associations`);
+        // Reload data to reflect changes
+        loadData();
+      } else {
+        const error = await response.json();
+        console.error('Failed to update job associations:', error);
+        alert(`Failed to update job associations: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error updating job associations:', error);
+      alert('Error updating job associations');
+    }
+  };
+
   // Handle authentication loading
   if (authState.isLoading) {
     return (
@@ -853,6 +907,13 @@ function AppContent() {
                   >
                     <Download className="w-4 h-4" />
                     <span>Export</span>
+                  </button>
+                  <button
+                    onClick={handleUpdateTimeEntryJobAssociations}
+                    className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Fix Job Links</span>
                   </button>
                   <button
                     onClick={() => setShowSettings(true)}

@@ -211,6 +211,14 @@ export const WorkOrderModal: React.FC<WorkOrderModalProps> = ({
                   <p className="text-sm text-yellow-700">- Customer: {workOrder.timeEntries[0].customerName}</p>
                 </div>
               )}
+              {workOrder.timeEntries.length === 0 && (
+                <div className="mt-2">
+                  <p className="text-sm text-yellow-700">No time entries found. Possible reasons:</p>
+                  <p className="text-sm text-yellow-700">- Time entries don't have matching jobId</p>
+                  <p className="text-sm text-yellow-700">- Time entries don't have matching customer name</p>
+                  <p className="text-sm text-yellow-700">- Time entries don't have matching technician name</p>
+                </div>
+              )}
             </div>
             
             {workOrder.timeEntries.length > 0 && (
