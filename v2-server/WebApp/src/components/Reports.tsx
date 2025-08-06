@@ -628,6 +628,16 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
 
             {/* Report Content */}
             <div className="space-y-6">
+              {/* Debug info */}
+              <div className="bg-yellow-50 p-4 rounded-lg">
+                <h4 className="font-medium text-yellow-800">Debug Info:</h4>
+                <p className="text-sm text-yellow-700">Search Mode: {searchMode}</p>
+                <p className="text-sm text-yellow-700">Selected Technician: {selectedTechnician}</p>
+                <p className="text-sm text-yellow-700">Tech Search Data Length: {techSearchData.length}</p>
+                <p className="text-sm text-yellow-700">Selected Date: {selectedDate.toDateString()}</p>
+                <p className="text-sm text-yellow-700">Selected Date Entries Length: {selectedDateEntries.length}</p>
+              </div>
+              
               {searchMode === 'tech' && selectedTechnician && (
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-4">

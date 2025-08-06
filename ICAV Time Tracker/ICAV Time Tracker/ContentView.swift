@@ -745,17 +745,20 @@ struct ContentView: View {
                         // Wait for share to complete before proceeding
                         await MainActor.run {
                             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                                // Complete the clock out in the view model
-                                viewModel.clockOut()
-                                
-                                // Force UI refresh
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                    // Close the modal after clock out
-                                    showingJobNotesModal = false
-                                    jobNotesEntry = nil
-                                    jobNotesText = ""
-                                    aiSummary = ""
-                                }
+                                                        // Complete the clock out in the view model
+                        viewModel.clockOut()
+                        
+                        // Force UI refresh by triggering a state update
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            // Close the modal after clock out
+                            showingJobNotesModal = false
+                            jobNotesEntry = nil
+                            jobNotesText = ""
+                            aiSummary = ""
+                            
+                            // Force UI refresh by updating a state variable
+                            viewModel.objectWillChange.send()
+                        }
                             }
                         }
                     }
@@ -769,13 +772,16 @@ struct ContentView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                         viewModel.clockOut()
                         
-                        // Force UI refresh
+                        // Force UI refresh by triggering a state update
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                             // Close the modal after clock out
                             showingJobNotesModal = false
                             jobNotesEntry = nil
                             jobNotesText = ""
                             aiSummary = ""
+                            
+                            // Force UI refresh by updating a state variable
+                            viewModel.objectWillChange.send()
                         }
                     }
                 }
