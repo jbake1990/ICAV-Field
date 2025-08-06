@@ -279,27 +279,37 @@ function AppContent() {
         entriesWithJobId: timeEntries.filter(e => e.jobId === assignment.jobId).length
       });
       
-      // Calculate totals
+      // Calculate totals (convert milliseconds to hours)
       const totalWorkHours = relatedTimeEntries.reduce((total, entry) => {
-        if (entry.duration) return total + entry.duration;
+        if (entry.duration) return total + (entry.duration / (1000 * 60 * 60)); // Convert ms to hours
         return total;
       }, 0);
       
       const totalDriveHours = relatedTimeEntries.reduce((total, entry) => {
-        if (entry.driveDuration) return total + entry.driveDuration;
+        if (entry.driveDuration) return total + (entry.driveDuration / (1000 * 60 * 60)); // Convert ms to hours
         return total;
       }, 0);
       
       const totalLunchHours = relatedTimeEntries.reduce((total, entry) => {
-        if (entry.lunchDuration) return total + entry.lunchDuration;
+        if (entry.lunchDuration) return total + (entry.lunchDuration / (1000 * 60 * 60)); // Convert ms to hours
         return total;
       }, 0);
       
-      // Combine all AI summaries
+      // Combine all AI summaries and job notes
       const allSummaries = relatedTimeEntries
-        .filter(entry => entry.aiSummary)
-        .map(entry => entry.aiSummary)
-        .join('\n\n');
+        .filter(entry => entry.aiSummary || entry.jobNotes)
+        .map(entry => {
+          let summary = '';
+          if (entry.aiSummary) {
+            summary += `AI Summary: ${entry.aiSummary}\n\n`;
+          }
+          if (entry.jobNotes) {
+            summary += `Job Notes: ${entry.jobNotes}\n\n`;
+          }
+          return summary.trim();
+        })
+        .filter(summary => summary.length > 0)
+        .join('\n\n---\n\n');
       
       const workOrder: WorkOrder = {
         id: `wo-${assignment.id}`,

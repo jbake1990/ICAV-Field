@@ -12,6 +12,7 @@ export interface TimeEntry {
   driveStartTime?: Date;
   driveEndTime?: Date;
   aiSummary?: string;
+  jobNotes?: string;
   isActive: boolean;
   isOnLunch: boolean;
   isDriving: boolean;
