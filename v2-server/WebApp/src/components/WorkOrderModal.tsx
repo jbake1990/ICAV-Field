@@ -189,9 +189,31 @@ export const WorkOrderModal: React.FC<WorkOrderModalProps> = ({
           )}
 
           {/* Time Entries */}
-          {workOrder.timeEntries.length > 0 && (
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Time Entries</h3>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+              Time Entries ({workOrder.timeEntries.length})
+            </h3>
+            
+            {/* Debug info */}
+            <div className="bg-yellow-50 p-4 rounded-lg mb-4">
+              <h4 className="font-medium text-yellow-800">Debug Info:</h4>
+              <p className="text-sm text-yellow-700">Job ID: {workOrder.jobId}</p>
+              <p className="text-sm text-yellow-700">Job Assignment ID: {workOrder.jobAssignmentId}</p>
+              <p className="text-sm text-yellow-700">Technician: {workOrder.technicianName}</p>
+              <p className="text-sm text-yellow-700">Customer: {workOrder.customerName}</p>
+              <p className="text-sm text-yellow-700">Time Entries Count: {workOrder.timeEntries.length}</p>
+              {workOrder.timeEntries.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-sm text-yellow-700">First Entry Details:</p>
+                  <p className="text-sm text-yellow-700">- Job ID: {workOrder.timeEntries[0].jobId}</p>
+                  <p className="text-sm text-yellow-700">- Job Assignment ID: {workOrder.timeEntries[0].jobAssignmentId}</p>
+                  <p className="text-sm text-yellow-700">- Technician: {workOrder.timeEntries[0].technicianName}</p>
+                  <p className="text-sm text-yellow-700">- Customer: {workOrder.timeEntries[0].customerName}</p>
+                </div>
+              )}
+            </div>
+            
+            {workOrder.timeEntries.length > 0 && (
               <div className="space-y-3">
                 {workOrder.timeEntries.map((entry, index) => (
                   <div key={entry.id} className="bg-gray-50 p-4 rounded-lg">

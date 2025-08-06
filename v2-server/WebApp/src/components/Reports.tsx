@@ -263,7 +263,7 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
     const hasEntriesForDate = (date: Date) => {
       return filteredEntries.some(entry => {
         const entryDate = entry.clockInTime || entry.driveStartTime;
-        return entryDate && entryDate.toDateString() === date.toDateString() &&
+        return entryDate && date && entryDate.toDateString() === date.toDateString() &&
                entry.technicianName.toLowerCase().includes(selectedTechnician.toLowerCase());
       });
     };
@@ -306,7 +306,7 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
               } ${
                 day && day.toDateString() === selectedDate.toDateString()
                   ? 'bg-blue-500 text-white'
-                  : hasEntriesForDate(day!)
+                  : day && hasEntriesForDate(day)
                     ? 'bg-green-100 text-green-800'
                     : 'text-gray-700'
               }`}
