@@ -125,15 +125,48 @@ module.exports = async function handler(req, res) {
     //   console.log(`Deleted ${rowCount} old entries`);
     // }
     
-    // 6. Fix entries with missing job_id or job_assignment_id
-    const { rowCount: updatedCount } = await sql`
-      UPDATE time_entries 
-      SET job_id = NULL, job_assignment_id = NULL
-      WHERE job_id IS NOT NULL 
-         AND job_id NOT IN (SELECT id FROM jobs)
+    // 6. Fix entries with missing job_id by linking to jobs with matching customer names
+    const { rows: entriesWithoutJobId } = await sql`
+      SELECT id, customer_name, technician_name, created_at
+      FROM time_entries 
+      WHERE job_id IS NULL
     `;
     
-    console.log(`Updated ${updatedCount} entries with invalid job references`);
+    console.log(`Found ${entriesWithoutJobId.length} entries without job_id`);
+    
+    let updatedCount = 0;
+    for (const entry of entriesWithoutJobId) {
+      try {
+        // Find a job with matching customer name
+        const { rows: jobs } = await sql`
+          SELECT id, customer_name, title
+          FROM jobs 
+          WHERE customer_name ILIKE ${entry.customer_name}
+          ORDER BY created_at DESC
+          LIMIT 1
+        `;
+        
+        if (jobs.length > 0) {
+          const job = jobs[0];
+          console.log(`Linking time entry ${entry.id} (${entry.customer_name}) to job ${job.id} (${job.customer_name})`);
+          
+          // Update the time entry with the job_id
+          await sql`
+            UPDATE time_entries 
+            SET job_id = ${job.id}
+            WHERE id = ${entry.id}
+          `;
+          
+          updatedCount++;
+        } else {
+          console.log(`No matching job found for time entry ${entry.id} (${entry.customer_name})`);
+        }
+      } catch (error) {
+        console.error(`Error updating time entry ${entry.id}:`, error);
+      }
+    }
+    
+    console.log(`Updated ${updatedCount} time entries with job associations`);
     
     // 7. Get summary of remaining entries
     const { rows: summary } = await sql`

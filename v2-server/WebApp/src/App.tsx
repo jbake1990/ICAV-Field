@@ -756,7 +756,7 @@ function AppContent() {
 
   const handleUpdateTimeEntryJobAssociations = async () => {
     try {
-      const response = await fetch('/api/update-time-entries-job-associations', {
+      const response = await fetch('/api/cleanup-entries', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
