@@ -400,9 +400,9 @@ struct ContentView: View {
             } else {
                 viewModel.showAlert("No active time entry to clock out")
             }
-        case "Start Break":
+        case "Start Lunch":
             viewModel.startLunch() // Reuse startLunch for break functionality
-        case "End Break":
+        case "End Lunch":
             viewModel.endLunch() // Reuse endLunch for break functionality
         case "Start Driving":
             if let selectedJob = selectedJob {
@@ -475,8 +475,8 @@ struct ContentView: View {
             return [
                 "Clock In": .unavailable,
                 "Clock Out": .unavailable,
-                "Start Break": .unavailable,
-                "End Break": .unavailable,
+                "Start Lunch": .unavailable,
+                "End Lunch": .unavailable,
                 "Start Driving": .unavailable,
                 "End Driving": .unavailable
             ]
