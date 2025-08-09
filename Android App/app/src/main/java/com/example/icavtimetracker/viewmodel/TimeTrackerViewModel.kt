@@ -779,6 +779,27 @@ class TimeTrackerViewModel(application: Application) : AndroidViewModel(applicat
                         continue
                     }
                     
+                    // Check if there's already a manual time entry for this customer/job
+                    val existingManualEntryIndex = currentEntries.indexOfFirst { entry ->
+                        entry.customerName == job.customerName &&
+                        entry.userId == currentUser.id &&
+                        entry.jobAssignmentId == null // Manual entries don't have assignment IDs
+                    }
+                    
+                    if (existingManualEntryIndex != -1) {
+                        Log.d("TimeTrackerViewModel", "📋 Skipping scheduled entry for ${job.customerName} - manual entry already exists")
+                        
+                        // Update the existing manual entry to link it to the job assignment
+                        val existingEntry = currentEntries[existingManualEntryIndex]
+                        val updatedEntry = existingEntry.copy(
+                            jobAssignmentId = assignment.id,
+                            jobId = job.id
+                        )
+                        currentEntries[existingManualEntryIndex] = updatedEntry
+                        Log.d("TimeTrackerViewModel", "🔗 Linked manual entry to job assignment: ${assignment.id}")
+                        continue
+                    }
+                    
                     Log.d("TimeTrackerViewModel", "Creating time entry for scheduled job: ${job.customerName}")
                     
                     // Create a new time entry for this job assignment

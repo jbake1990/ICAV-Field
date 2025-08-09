@@ -853,6 +853,25 @@ class TimeTrackerViewModel: ObservableObject {
                 continue
             }
             
+            // Check if there's already a manual time entry for this customer/job
+            let existingManualEntry = timeEntries.first { entry in
+                entry.customerName == job.customerName &&
+                entry.userId == currentUser.id &&
+                entry.jobAssignmentId == nil // Manual entries don't have assignment IDs
+            }
+            
+            if existingManualEntry != nil {
+                print("📋 Skipping scheduled entry for \(job.customerName) - manual entry already exists")
+                
+                // Update the existing manual entry to link it to the job assignment
+                if let index = timeEntries.firstIndex(where: { $0.id == existingManualEntry!.id }) {
+                    timeEntries[index].jobAssignmentId = assignment.id
+                    timeEntries[index].jobId = job.id
+                    print("🔗 Linked manual entry to job assignment: \(assignment.id)")
+                }
+                continue
+            }
+            
             print("📋 Creating time entry for scheduled job: \(job.customerName)")
             
             // Create a new time entry for this job assignment
