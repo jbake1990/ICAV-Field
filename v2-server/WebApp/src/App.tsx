@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Clock, Users, Settings, Download, X, UserPlus, Trash2, LogOut, UserCheck, Shield, FileText, Calendar, Brain, Wrench, RefreshCw } from 'lucide-react';
+import { Clock, Users, Settings, Download, X, UserPlus, Trash2, LogOut, UserCheck, Shield, FileText, Calendar, Brain, Wrench, RefreshCw, Home } from 'lucide-react';
 import { TimeEntry, TimeEntryFilters, DashboardStats, User, Job, JobAssignment, WorkOrder } from './types';
 import { api } from './services/api';
 import DashboardStatsComponent from './components/DashboardStats';
@@ -11,6 +11,7 @@ import JobCalendar from './components/JobCalendar';
 import JobNotesModal from './components/JobNotesModal';
 import { WorkOrders } from './components/WorkOrders';
 import { WorkOrderModal } from './components/WorkOrderModal';
+import Dashboard from './components/Dashboard';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { formatDate, formatTime } from './utils/timeUtils';
 
@@ -24,7 +25,7 @@ function AppContent() {
   const [assignments, setAssignments] = useState<JobAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'calendar' | 'reports' | 'workorders'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'workorders' | 'calendar' | 'reports'>('dashboard');
   const [showSettings, setShowSettings] = useState(false);
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [showReports, setShowReports] = useState(false);
@@ -764,32 +765,7 @@ function AppContent() {
     alert('PDF export will be implemented soon');
   };
 
-  const handleUpdateTimeEntryJobAssociations = async () => {
-    try {
-      const response = await fetch('/api/cleanup-entries', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json'
-        }
-      });
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Job associations updated:', result);
-        alert(`Updated ${result.updatedCount} time entries with job associations`);
-        // Reload data to reflect changes
-        loadData();
-      } else {
-        const error = await response.json();
-        console.error('Failed to update job associations:', error);
-        alert(`Failed to update job associations: ${error.error}`);
-      }
-    } catch (error) {
-      console.error('Error updating job associations:', error);
-      alert('Error updating job associations');
-    }
-  };
 
   // Handle authentication loading
   if (authState.isLoading) {
@@ -831,173 +807,191 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Clock className="w-8 h-8 text-primary-600" />
-              <div>
-                <h1 className="text-lg sm:text-xl font-semibold text-gray-900">ICAV Field Management</h1>
-                <p className="text-xs sm:text-sm text-gray-500">Office Dashboard</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              {/* User Info */}
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center space-x-2 text-sm">
-                  {authState.user?.role === 'admin' ? (
-                    <Shield className="w-4 h-4 text-orange-500" />
-                  ) : (
-                    <UserCheck className="w-4 h-4 text-blue-500" />
-                  )}
-                  <span className="text-gray-700">{authState.user?.displayName}</span>
-                  <span className="text-gray-500">
-                    ({authState.user?.role === 'admin' ? 'Admin' : 'Tech'})
-                  </span>
-                </div>
-              </div>
-
-              {error && (
-                <div className="text-sm text-orange-600 bg-orange-50 px-3 py-1 rounded-lg">
-                  ⚠️ {error}
-                </div>
-              )}
-
-              {/* Navigation Buttons */}
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setCurrentView('dashboard')}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                    currentView === 'dashboard' 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  <Clock className="w-4 h-4" />
-                  <span>Work Orders</span>
-                </button>
-                
-                {authState.user?.role === 'admin' && (
-                  <button
-                    onClick={() => setCurrentView('calendar')}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                      currentView === 'calendar' 
-                        ? 'bg-blue-600 text-white' 
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    <Calendar className="w-4 h-4" />
-                    <span>Schedule</span>
-                  </button>
-                )}
-                
-                <button
-                  onClick={() => setCurrentView('reports')}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                    currentView === 'reports' 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  <FileText className="w-4 h-4" />
-                  <span>Reports</span>
-                </button>
-                
-
-              </div>
-
-              {/* Admin-only features */}
-              {authState.user?.role === 'admin' && (
-                <>
-                  <button
-                    onClick={handleExport}
-                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Export</span>
-                  </button>
-                  <button
-                    onClick={handleUpdateTimeEntryJobAssociations}
-                    className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    <span>Fix Job Links</span>
-                  </button>
-                  <button
-                    onClick={() => setShowSettings(true)}
-                    className="p-2 text-gray-400 hover:text-gray-600"
-                    title="Settings"
-                  >
-                    <Settings className="w-5 h-5" />
-                  </button>
-                </>
-              )}
-
-              {/* Logout Button */}
-              <button
-                onClick={logout}
-                className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 transition-colors"
-                title="Logout"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Logout</span>
-              </button>
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Left Sidebar Navigation */}
+      <aside className="w-64 bg-white shadow-lg border-r border-gray-200 flex flex-col">
+        {/* Logo/Header */}
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center space-x-3">
+            <Clock className="w-8 h-8 text-blue-600" />
+            <div>
+              <h1 className="text-lg font-semibold text-gray-900">ICAV Field</h1>
+              <p className="text-sm text-gray-500">Management</p>
             </div>
           </div>
         </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {currentView === 'dashboard' && (
-          <WorkOrders
-            workOrders={workOrders}
-            onViewWorkOrder={handleViewWorkOrder}
-            onEditWorkOrder={handleEditWorkOrder}
-            onExportWorkOrder={handleExportWorkOrder}
-            isLoading={loading}
-          />
+        {/* User Info */}
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center space-x-3">
+            {authState.user?.role === 'admin' ? (
+              <Shield className="w-5 h-5 text-orange-500" />
+            ) : (
+              <UserCheck className="w-5 h-5 text-blue-500" />
+            )}
+            <div>
+              <div className="font-medium text-gray-900">{authState.user?.displayName}</div>
+              <div className="text-sm text-gray-500">
+                {authState.user?.role === 'admin' ? 'Administrator' : 'Technician'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Links */}
+        <nav className="flex-1 p-4 space-y-2">
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-left ${
+              currentView === 'dashboard' 
+                ? 'bg-blue-600 text-white' 
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <Home className="w-5 h-5" />
+            <span>Dashboard</span>
+          </button>
+          
+          <button
+            onClick={() => setCurrentView('workorders')}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-left ${
+              currentView === 'workorders' 
+                ? 'bg-blue-600 text-white' 
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <Clock className="w-5 h-5" />
+            <span>Work Orders</span>
+          </button>
+          
+          {authState.user?.role === 'admin' && (
+            <button
+              onClick={() => setCurrentView('calendar')}
+              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-left ${
+                currentView === 'calendar' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <Calendar className="w-5 h-5" />
+              <span>Schedule</span>
+            </button>
+          )}
+          
+          <button
+            onClick={() => setCurrentView('reports')}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-left ${
+              currentView === 'reports' 
+                ? 'bg-blue-600 text-white' 
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <FileText className="w-5 h-5" />
+            <span>Reports</span>
+          </button>
+        </nav>
+
+        {/* Bottom Actions */}
+        <div className="p-4 border-t border-gray-200 space-y-2">
+          {authState.user?.role === 'admin' && (
+            <>
+              <button
+                onClick={handleExport}
+                className="w-full flex items-center space-x-3 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                <span>Export Data</span>
+              </button>
+              <button
+                onClick={() => setShowSettings(true)}
+                className="w-full flex items-center space-x-3 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                <span>Settings</span>
+              </button>
+            </>
+          )}
+          <button
+            onClick={logout}
+            className="w-full flex items-center space-x-3 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Top Header with Error Display */}
+        {error && (
+          <div className="bg-orange-50 border-b border-orange-200 px-6 py-3">
+            <div className="text-sm text-orange-600">
+              ⚠️ {error}
+            </div>
+          </div>
         )}
 
-        {currentView === 'calendar' && authState.user?.role === 'admin' && (
-                          <JobCalendar
-                  users={users}
-                  jobs={jobs}
-                  assignments={assignments}
-                  onAssignJob={handleAssignJob}
-                  onUpdateAssignment={handleUpdateAssignment}
-                  onDeleteAssignment={handleDeleteAssignment}
-                  onCreateJob={handleCreateJob}
-                  onDeleteJob={handleDeleteJob}
-                />
-        )}
+        {/* Main Content */}
+        <main className="flex-1 p-6 overflow-auto">
+          {currentView === 'dashboard' && (
+            <Dashboard
+              users={users}
+              timeEntries={timeEntries}
+              isLoading={loading}
+            />
+          )}
 
-        {currentView === 'reports' && (
-          <Reports
-            timeEntries={timeEntries}
-            onClose={() => setCurrentView('dashboard')}
-          />
-        )}
+          {currentView === 'workorders' && (
+            <WorkOrders
+              workOrders={workOrders}
+              onViewWorkOrder={handleViewWorkOrder}
+              onEditWorkOrder={handleEditWorkOrder}
+              onExportWorkOrder={handleExportWorkOrder}
+              isLoading={loading}
+            />
+          )}
 
-        {selectedEntryForNotes && (
-          <JobNotesModal
-            entry={selectedEntryForNotes}
-            onClose={() => setSelectedEntryForNotes(null)}
-          />
-        )}
+          {currentView === 'calendar' && authState.user?.role === 'admin' && (
+            <JobCalendar
+              users={users}
+              jobs={jobs}
+              assignments={assignments}
+              onAssignJob={handleAssignJob}
+              onUpdateAssignment={handleUpdateAssignment}
+              onDeleteAssignment={handleDeleteAssignment}
+              onCreateJob={handleCreateJob}
+              onDeleteJob={handleDeleteJob}
+            />
+          )}
 
-        {/* Work Order Modal */}
-        {selectedWorkOrder && (
-          <WorkOrderModal
-            workOrder={selectedWorkOrder}
-            onClose={() => setSelectedWorkOrder(null)}
-            onEdit={handleEditWorkOrder}
-            onExport={handleExportWorkOrder}
-          />
-        )}
-      </main>
+          {currentView === 'reports' && (
+            <Reports
+              timeEntries={timeEntries}
+              onClose={() => setCurrentView('dashboard')}
+            />
+          )}
+
+        </main>
+      </div>
+
+      {/* Modals */}
+      {selectedEntryForNotes && (
+        <JobNotesModal
+          entry={selectedEntryForNotes}
+          onClose={() => setSelectedEntryForNotes(null)}
+        />
+      )}
+
+      {/* Work Order Modal */}
+      {selectedWorkOrder && (
+        <WorkOrderModal
+          workOrder={selectedWorkOrder}
+          onClose={() => setSelectedWorkOrder(null)}
+          onEdit={handleEditWorkOrder}
+          onExport={handleExportWorkOrder}
+        />
+      )}
 
       {/* Settings Modal - Admin Only */}
       {showSettings && authState.user?.role === 'admin' && (
