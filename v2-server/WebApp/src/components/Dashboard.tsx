@@ -20,14 +20,14 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ users, timeEntries, isLoading }: DashboardProps) {
-  // Calculate technician statuses
+  // Calculate technician statuses (filter out administrators)
   const technicianStatuses = useMemo((): TechnicianStatus[] => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    return users.map(user => {
+    return users.filter(user => user.role === 'tech').map(user => {
       // Get all entries for this technician today
       const todayEntries = timeEntries.filter(entry => {
         const entryDate = entry.clockInTime || entry.driveStartTime;
@@ -287,8 +287,8 @@ export default function Dashboard({ users, timeEntries, isLoading }: DashboardPr
       {sortedStatuses.length === 0 && (
         <div className="text-center py-12">
           <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No Technicians Found</h3>
-          <p className="text-gray-500">Add technicians to see their status here.</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No Field Technicians Found</h3>
+          <p className="text-gray-500">Add field technicians to see their status here.</p>
         </div>
       )}
     </div>
