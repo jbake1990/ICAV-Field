@@ -175,28 +175,29 @@ class OpenAIService {
         return """
         ${customerContext}Technician Notes: $notes
         
-        Transform these brief technician notes into a comprehensive, professional job summary that could be shared with the customer. The summary should be detailed enough for the customer to understand exactly what work was performed and what to expect next.
+        Transform these brief technician notes into a comprehensive, professional job summary for internal documentation and potential client communication. The summary should be detailed enough to understand exactly what work was performed and what follow-up actions are needed.
         
         Please create a detailed job summary with the following format:
         
         **Customer:** [Extract or use provided customer name, or "Not specified" if not found]
         
         **Work Performed:** 
-        [Provide a detailed, customer-friendly explanation of all work completed. Expand on technical abbreviations, explain the purpose of each task, and describe any issues that were identified and resolved. Use clear, professional language that a non-technical customer would understand. Include specific details about equipment worked on, parts replaced, systems tested, etc.]
+        [Provide a detailed, professional explanation of all work completed. Expand on technical abbreviations, explain the purpose of each task, and describe any issues that were identified and resolved. Use clear, professional language suitable for both technical and non-technical audiences. Include specific details about equipment worked on, parts replaced, systems tested, etc.]
         
         **Follow-up Required:** 
-        [Provide detailed information about any follow-up actions needed. Explain WHY the follow-up is necessary, WHEN it should be completed, and WHAT the customer can expect. If no follow-up is needed, explain that the work is complete and what the customer should monitor or expect going forward.]
+        [Provide detailed information about any follow-up actions needed. Explain WHY the follow-up is necessary, WHEN it should be completed, and WHAT should be expected. If no follow-up is needed, explain that the work is complete and what should be monitored going forward.]
         
         **Additional Notes:**
-        [Include any warranty information, maintenance recommendations, or preventive measures the customer should be aware of. Mention any observations about equipment condition or potential future needs.]
+        [Include any warranty information, maintenance recommendations, or preventive measures that should be noted. Mention any observations about equipment condition or potential future needs.]
         
         Guidelines:
-        - Write as if speaking directly to the customer
-        - Explain technical terms in plain language
+        - Write in third-person, professional documentation style
+        - Avoid using "you", "your", or other second-person language
+        - Explain technical terms in clear language
         - Be specific about what was accomplished
         - Provide context for why work was necessary
         - Give clear expectations for any follow-up
-        - Maintain a professional, helpful tone
+        - Maintain a professional, informative tone
         - Include timeframes when relevant
         - Mention any testing or verification performed
         """.trimIndent()

@@ -152,13 +152,15 @@ function AppContent() {
     loadData();
   }, [authState.isAuthenticated, authState.user?.role]);
 
-  // Real-time updates for active time entries
+  // Real-time updates for active time entries and periodic refresh of jobs/assignments
   useEffect(() => {
     if (!authState.isAuthenticated) return;
 
+    let refreshCount = 0;
+
     const interval = setInterval(async () => {
       try {
-        // Only refresh time entries for real-time updates
+        // Always refresh time entries for real-time updates
         const apiEntries = await api.getTimeEntries();
         
         const formattedEntries: TimeEntry[] = apiEntries.map(entry => ({
@@ -172,8 +174,39 @@ function AppContent() {
         }));
 
         setTimeEntries(formattedEntries);
+
+        // Every 4th refresh (every 20 seconds), also refresh jobs and assignments
+        // This ensures new unscheduled jobs appear in work orders without excessive API calls
+        refreshCount++;
+        if (refreshCount % 4 === 0) {
+          console.log('Refreshing jobs and assignments for new work orders...');
+          
+          const [apiJobs, apiAssignments] = await Promise.all([
+            api.getJobs(),
+            api.getJobAssignments()
+          ]);
+
+          const formattedJobs: Job[] = apiJobs.map(job => ({
+            ...job,
+            status: job.status as Job['status'],
+            jobType: job.jobType as Job['jobType'],
+            createdAt: new Date(job.createdAt),
+            updatedAt: new Date(job.updatedAt)
+          }));
+
+          const formattedAssignments: JobAssignment[] = apiAssignments.map(assignment => ({
+            ...assignment,
+            status: assignment.status as JobAssignment['status'],
+            assignedDate: new Date(assignment.assignedDate),
+            createdAt: new Date(assignment.createdAt),
+            updatedAt: new Date(assignment.updatedAt)
+          }));
+
+          setJobs(formattedJobs);
+          setAssignments(formattedAssignments);
+        }
       } catch (error) {
-        console.error('Failed to refresh time entries:', error);
+        console.error('Failed to refresh data:', error);
         // Don't show error to user for background refresh
       }
     }, 5000); // Refresh every 5 seconds
