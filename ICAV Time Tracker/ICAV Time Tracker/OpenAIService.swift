@@ -83,11 +83,11 @@ class OpenAIService: ObservableObject {
         let request = OpenAIRequest(
             model: "gpt-3.5-turbo",
             messages: [
-                OpenAIRequest.Message(role: "system", content: "You are a helpful assistant that creates professional job summaries for field technicians."),
+                OpenAIRequest.Message(role: "system", content: "You are an expert technical writer who creates detailed, professional job summaries that can be shared with customers. Your role is to transform brief technician notes into comprehensive, customer-friendly reports that explain what work was performed and what follow-up actions are needed."),
                 OpenAIRequest.Message(role: "user", content: prompt)
             ],
-            maxTokens: 300,
-            temperature: 0.3
+            maxTokens: 600,
+            temperature: 0.2
         )
         
         var urlRequest = URLRequest(url: url)
@@ -127,15 +127,32 @@ class OpenAIService: ObservableObject {
         let customerContext = customerName.isEmpty ? "" : "Customer: \(customerName)\n"
         
         return """
-        \(customerContext)Job Notes: \(notes)
+        \(customerContext)Technician Notes: \(notes)
         
-        Please create a professional job summary with the following format:
+        Transform these brief technician notes into a comprehensive, professional job summary that could be shared with the customer. The summary should be detailed enough for the customer to understand exactly what work was performed and what to expect next.
+        
+        Please create a detailed job summary with the following format:
         
         **Customer:** [Extract or use provided customer name, or "Not specified" if not found]
-        **Work Performed:** [Concise description of the work completed]
-        **Follow-up Required:** [Any follow-up actions needed, or "None" if not applicable]
         
-        Keep the summary professional, concise, and focused on the key details that would be useful for scheduling, billing, and future service calls.
+        **Work Performed:** 
+        [Provide a detailed, customer-friendly explanation of all work completed. Expand on technical abbreviations, explain the purpose of each task, and describe any issues that were identified and resolved. Use clear, professional language that a non-technical customer would understand. Include specific details about equipment worked on, parts replaced, systems tested, etc.]
+        
+        **Follow-up Required:** 
+        [Provide detailed information about any follow-up actions needed. Explain WHY the follow-up is necessary, WHEN it should be completed, and WHAT the customer can expect. If no follow-up is needed, explain that the work is complete and what the customer should monitor or expect going forward.]
+        
+        **Additional Notes:**
+        [Include any warranty information, maintenance recommendations, or preventive measures the customer should be aware of. Mention any observations about equipment condition or potential future needs.]
+        
+        Guidelines:
+        - Write as if speaking directly to the customer
+        - Explain technical terms in plain language
+        - Be specific about what was accomplished
+        - Provide context for why work was necessary
+        - Give clear expectations for any follow-up
+        - Maintain a professional, helpful tone
+        - Include timeframes when relevant
+        - Mention any testing or verification performed
         """
     }
     
@@ -144,25 +161,87 @@ class OpenAIService: ObservableObject {
         var customerName = "Not specified"
         var workDescription = "No description provided"
         var followUpSteps = "None"
+        var additionalNotes = ""
+        var currentSection = ""
+        var tempContent = ""
         
         for line in lines {
             let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
             
-            if trimmedLine.lowercased().contains("customer:") {
-                customerName = extractValue(from: trimmedLine, after: "customer:")
-            } else if trimmedLine.lowercased().contains("work performed:") {
-                workDescription = extractValue(from: trimmedLine, after: "work performed:")
-            } else if trimmedLine.lowercased().contains("follow-up") {
-                followUpSteps = extractValue(from: trimmedLine, after: ":")
+            if trimmedLine.lowercased().contains("**customer:**") {
+                if !tempContent.isEmpty() && !currentSection.isEmpty() {
+                    assignContent(section: currentSection, content: tempContent, 
+                                customerName: &customerName, workDescription: &workDescription, 
+                                followUpSteps: &followUpSteps, additionalNotes: &additionalNotes)
+                }
+                currentSection = "customer"
+                tempContent = extractValue(from: trimmedLine, after: "customer:")
+            } else if trimmedLine.lowercased().contains("**work performed:**") {
+                if !tempContent.isEmpty() && !currentSection.isEmpty() {
+                    assignContent(section: currentSection, content: tempContent, 
+                                customerName: &customerName, workDescription: &workDescription, 
+                                followUpSteps: &followUpSteps, additionalNotes: &additionalNotes)
+                }
+                currentSection = "work"
+                tempContent = extractValue(from: trimmedLine, after: "work performed:")
+            } else if trimmedLine.lowercased().contains("**follow-up required:**") {
+                if !tempContent.isEmpty() && !currentSection.isEmpty() {
+                    assignContent(section: currentSection, content: tempContent, 
+                                customerName: &customerName, workDescription: &workDescription, 
+                                followUpSteps: &followUpSteps, additionalNotes: &additionalNotes)
+                }
+                currentSection = "followup"
+                tempContent = extractValue(from: trimmedLine, after: "follow-up required:")
+            } else if trimmedLine.lowercased().contains("**additional notes:**") {
+                if !tempContent.isEmpty() && !currentSection.isEmpty() {
+                    assignContent(section: currentSection, content: tempContent, 
+                                customerName: &customerName, workDescription: &workDescription, 
+                                followUpSteps: &followUpSteps, additionalNotes: &additionalNotes)
+                }
+                currentSection = "additional"
+                tempContent = extractValue(from: trimmedLine, after: "additional notes:")
+            } else if !trimmedLine.isEmpty() && !currentSection.isEmpty() {
+                tempContent += "\n" + trimmedLine
             }
+        }
+        
+        // Handle the last section
+        if !tempContent.isEmpty() && !currentSection.isEmpty() {
+            assignContent(section: currentSection, content: tempContent, 
+                        customerName: &customerName, workDescription: &workDescription, 
+                        followUpSteps: &followUpSteps, additionalNotes: &additionalNotes)
+        }
+        
+        // Combine work description and additional notes for the work description field
+        var finalWorkDescription = workDescription
+        if !additionalNotes.isEmpty() {
+            finalWorkDescription += "\n\nAdditional Notes:\n" + additionalNotes
         }
         
         return JobSummary(
             customerName: customerName,
-            workDescription: workDescription,
+            workDescription: finalWorkDescription,
             followUpSteps: followUpSteps,
             fullSummary: content
         )
+    }
+    
+    private func assignContent(section: String, content: String, 
+                             customerName: inout String, workDescription: inout String, 
+                             followUpSteps: inout String, additionalNotes: inout String) {
+        let cleanContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        switch section {
+        case "customer":
+            customerName = cleanContent.isEmpty ? "Not specified" : cleanContent
+        case "work":
+            workDescription = cleanContent.isEmpty ? "No description provided" : cleanContent
+        case "followup":
+            followUpSteps = cleanContent.isEmpty ? "None" : cleanContent
+        case "additional":
+            additionalNotes = cleanContent
+        default:
+            break
+        }
     }
     
     private func extractValue(from line: String, after delimiter: String) -> String {

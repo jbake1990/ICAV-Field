@@ -100,15 +100,15 @@ class OpenAIService {
             messages = listOf(
                 OpenAIRequest.Message(
                     role = "system",
-                    content = "You are a helpful assistant that creates professional job summaries for field technicians."
+                    content = "You are an expert technical writer who creates detailed, professional job summaries that can be shared with customers. Your role is to transform brief technician notes into comprehensive, customer-friendly reports that explain what work was performed and what follow-up actions are needed."
                 ),
                 OpenAIRequest.Message(
                     role = "user",
                     content = prompt
                 )
             ),
-            maxTokens = 300,
-            temperature = 0.3
+            maxTokens = 600,
+            temperature = 0.2
         )
         
         val requestJson = json.encodeToString(OpenAIRequest.serializer(), request)
@@ -173,15 +173,32 @@ class OpenAIService {
         val customerContext = if (customerName.isEmpty()) "" else "Customer: $customerName\n"
         
         return """
-        ${customerContext}Job Notes: $notes
+        ${customerContext}Technician Notes: $notes
         
-        Please create a professional job summary with the following format:
+        Transform these brief technician notes into a comprehensive, professional job summary that could be shared with the customer. The summary should be detailed enough for the customer to understand exactly what work was performed and what to expect next.
+        
+        Please create a detailed job summary with the following format:
         
         **Customer:** [Extract or use provided customer name, or "Not specified" if not found]
-        **Work Performed:** [Concise description of the work completed]
-        **Follow-up Required:** [Any follow-up actions needed, or "None" if not applicable]
         
-        Keep the summary professional, concise, and focused on the key details that would be useful for scheduling, billing, and future service calls.
+        **Work Performed:** 
+        [Provide a detailed, customer-friendly explanation of all work completed. Expand on technical abbreviations, explain the purpose of each task, and describe any issues that were identified and resolved. Use clear, professional language that a non-technical customer would understand. Include specific details about equipment worked on, parts replaced, systems tested, etc.]
+        
+        **Follow-up Required:** 
+        [Provide detailed information about any follow-up actions needed. Explain WHY the follow-up is necessary, WHEN it should be completed, and WHAT the customer can expect. If no follow-up is needed, explain that the work is complete and what the customer should monitor or expect going forward.]
+        
+        **Additional Notes:**
+        [Include any warranty information, maintenance recommendations, or preventive measures the customer should be aware of. Mention any observations about equipment condition or potential future needs.]
+        
+        Guidelines:
+        - Write as if speaking directly to the customer
+        - Explain technical terms in plain language
+        - Be specific about what was accomplished
+        - Provide context for why work was necessary
+        - Give clear expectations for any follow-up
+        - Maintain a professional, helpful tone
+        - Include timeframes when relevant
+        - Mention any testing or verification performed
         """.trimIndent()
     }
     
@@ -190,29 +207,111 @@ class OpenAIService {
         var customerName = "Not specified"
         var workDescription = "No description provided"
         var followUpSteps = "None"
+        var additionalNotes = ""
+        var currentSection = ""
+        var tempContent = ""
         
         for (line in lines) {
             val trimmedLine = line.trim()
             
             when {
-                trimmedLine.lowercase().contains("customer:") -> {
-                    customerName = extractValue(trimmedLine, "customer:")
+                trimmedLine.lowercase().contains("**customer:**") -> {
+                    if (tempContent.isNotEmpty() && currentSection.isNotEmpty()) {
+                        val values = assignContent(currentSection, tempContent, customerName, workDescription, followUpSteps, additionalNotes)
+                        customerName = values[0]
+                        workDescription = values[1]
+                        followUpSteps = values[2]
+                        additionalNotes = values[3]
+                    }
+                    currentSection = "customer"
+                    tempContent = extractValue(trimmedLine, "customer:")
                 }
-                trimmedLine.lowercase().contains("work performed:") -> {
-                    workDescription = extractValue(trimmedLine, "work performed:")
+                trimmedLine.lowercase().contains("**work performed:**") -> {
+                    if (tempContent.isNotEmpty() && currentSection.isNotEmpty()) {
+                        val values = assignContent(currentSection, tempContent, customerName, workDescription, followUpSteps, additionalNotes)
+                        customerName = values[0]
+                        workDescription = values[1]
+                        followUpSteps = values[2]
+                        additionalNotes = values[3]
+                    }
+                    currentSection = "work"
+                    tempContent = extractValue(trimmedLine, "work performed:")
                 }
-                trimmedLine.lowercase().contains("follow-up") -> {
-                    followUpSteps = extractValue(trimmedLine, ":")
+                trimmedLine.lowercase().contains("**follow-up required:**") -> {
+                    if (tempContent.isNotEmpty() && currentSection.isNotEmpty()) {
+                        val values = assignContent(currentSection, tempContent, customerName, workDescription, followUpSteps, additionalNotes)
+                        customerName = values[0]
+                        workDescription = values[1]
+                        followUpSteps = values[2]
+                        additionalNotes = values[3]
+                    }
+                    currentSection = "followup"
+                    tempContent = extractValue(trimmedLine, "follow-up required:")
+                }
+                trimmedLine.lowercase().contains("**additional notes:**") -> {
+                    if (tempContent.isNotEmpty() && currentSection.isNotEmpty()) {
+                        val values = assignContent(currentSection, tempContent, customerName, workDescription, followUpSteps, additionalNotes)
+                        customerName = values[0]
+                        workDescription = values[1]
+                        followUpSteps = values[2]
+                        additionalNotes = values[3]
+                    }
+                    currentSection = "additional"
+                    tempContent = extractValue(trimmedLine, "additional notes:")
+                }
+                trimmedLine.isNotEmpty() && currentSection.isNotEmpty() -> {
+                    tempContent += "\n$trimmedLine"
                 }
             }
         }
         
+        // Handle the last section
+        if (tempContent.isNotEmpty() && currentSection.isNotEmpty()) {
+            val values = assignContent(currentSection, tempContent, customerName, workDescription, followUpSteps, additionalNotes)
+            customerName = values[0]
+            workDescription = values[1]
+            followUpSteps = values[2]
+            additionalNotes = values[3]
+        }
+        
+        // Combine work description and additional notes for the work description field
+        var finalWorkDescription = workDescription
+        if (additionalNotes.isNotEmpty()) {
+            finalWorkDescription += "\n\nAdditional Notes:\n$additionalNotes"
+        }
+        
         return JobSummary(
             customerName = customerName,
-            workDescription = workDescription,
+            workDescription = finalWorkDescription,
             followUpSteps = followUpSteps,
             fullSummary = content
         )
+    }
+    
+    private fun assignContent(section: String, content: String, 
+                             currentCustomer: String, currentWork: String, 
+                             currentFollowUp: String, currentAdditional: String): List<String> {
+        val cleanContent = content.trim()
+        return when (section) {
+            "customer" -> listOf(
+                if (cleanContent.isEmpty()) "Not specified" else cleanContent,
+                currentWork, currentFollowUp, currentAdditional
+            )
+            "work" -> listOf(
+                currentCustomer,
+                if (cleanContent.isEmpty()) "No description provided" else cleanContent,
+                currentFollowUp, currentAdditional
+            )
+            "followup" -> listOf(
+                currentCustomer, currentWork,
+                if (cleanContent.isEmpty()) "None" else cleanContent,
+                currentAdditional
+            )
+            "additional" -> listOf(
+                currentCustomer, currentWork, currentFollowUp, cleanContent
+            )
+            else -> listOf(currentCustomer, currentWork, currentFollowUp, currentAdditional)
+        }
     }
     
     private fun extractValue(line: String, delimiter: String): String {
