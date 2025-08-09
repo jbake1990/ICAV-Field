@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { User, Clock, MapPin, Coffee, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import { User, Clock, MapPin, Coffee, CheckCircle, AlertCircle, XCircle, Truck, Sandwich } from 'lucide-react';
 import { TimeEntry, User as UserType } from '../types';
 import { formatTime } from '../utils/timeUtils';
 
@@ -113,11 +113,11 @@ export default function Dashboard({ users, timeEntries, isLoading }: DashboardPr
   const getStatusIcon = (status: TechnicianStatus['status']) => {
     switch (status) {
       case 'active':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
+        return <MapPin className="w-5 h-5 text-green-500" />;
       case 'on_lunch':
-        return <Coffee className="w-5 h-5 text-orange-500" />;
+        return <Sandwich className="w-5 h-5 text-orange-500" />;
       case 'driving':
-        return <MapPin className="w-5 h-5 text-blue-500" />;
+        return <Truck className="w-5 h-5 text-blue-500" />;
       case 'idle':
         return <XCircle className="w-5 h-5 text-gray-400" />;
       default:
@@ -183,7 +183,7 @@ export default function Dashboard({ users, timeEntries, isLoading }: DashboardPr
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-lg border border-gray-200">
           <div className="flex items-center space-x-3">
-            <CheckCircle className="w-8 h-8 text-green-500" />
+            <MapPin className="w-8 h-8 text-green-500" />
             <div>
               <div className="text-2xl font-bold text-gray-900">
                 {sortedStatuses.filter(s => s.status === 'active').length}
@@ -195,7 +195,7 @@ export default function Dashboard({ users, timeEntries, isLoading }: DashboardPr
         
         <div className="bg-white p-4 rounded-lg border border-gray-200">
           <div className="flex items-center space-x-3">
-            <Coffee className="w-8 h-8 text-orange-500" />
+            <Sandwich className="w-8 h-8 text-orange-500" />
             <div>
               <div className="text-2xl font-bold text-gray-900">
                 {sortedStatuses.filter(s => s.status === 'on_lunch').length}
@@ -207,7 +207,7 @@ export default function Dashboard({ users, timeEntries, isLoading }: DashboardPr
         
         <div className="bg-white p-4 rounded-lg border border-gray-200">
           <div className="flex items-center space-x-3">
-            <MapPin className="w-8 h-8 text-blue-500" />
+            <Truck className="w-8 h-8 text-blue-500" />
             <div>
               <div className="text-2xl font-bold text-gray-900">
                 {sortedStatuses.filter(s => s.status === 'driving').length}

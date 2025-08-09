@@ -458,21 +458,133 @@ module.exports = async function handler(req, res) {
 
       console.log('Successfully created time entry:', rows[0]);
       
+      // Check if this is a new unscheduled job and create Job/JobAssignment records
+      const createdEntry = rows[0];
+      if (!createdEntry.job_id) {
+        console.log('No job_id found for entry, checking if we need to create a job and assignment...');
+        
+        try {
+          // Check if a job already exists for this customer
+          const { rows: existingJobs } = await sql`
+            SELECT id FROM jobs WHERE customer_name = ${customerName}
+          `;
+          
+          let jobId = null;
+          
+          if (existingJobs.length === 0) {
+            // Create a new job for this unscheduled work
+            console.log('Creating new job for unscheduled work:', customerName);
+            const { rows: newJobRows } = await sql`
+              INSERT INTO jobs (
+                title,
+                customer_name,
+                description,
+                estimated_hours,
+                status,
+                job_type,
+                created_by
+              ) VALUES (
+                ${`Service Call - ${customerName}`},
+                ${customerName},
+                ${'Unscheduled service call created by technician'},
+                ${8.0},
+                ${'in_progress'}::job_status,
+                ${'service'}::text,
+                ${targetUserId}
+              )
+              RETURNING *
+            `;
+            
+            jobId = newJobRows[0].id;
+            console.log('Successfully created job:', jobId);
+          } else {
+            jobId = existingJobs[0].id;
+            console.log('Using existing job:', jobId);
+          }
+          
+          // Check if a job assignment already exists for this technician and job
+          const { rows: existingAssignments } = await sql`
+            SELECT id FROM job_assignments 
+            WHERE job_id = ${jobId} AND user_id = ${targetUserId}
+          `;
+          
+          if (existingAssignments.length === 0) {
+            // Create a job assignment for this technician
+            console.log('Creating job assignment for technician:', technicianName);
+            const today = new Date().toISOString().split('T')[0];
+            
+            const { rows: newAssignmentRows } = await sql`
+              INSERT INTO job_assignments (
+                job_id,
+                user_id,
+                technician_name,
+                assigned_date,
+                assigned_hours,
+                status
+              ) VALUES (
+                ${jobId},
+                ${targetUserId},
+                ${technicianName},
+                ${today},
+                ${8.0},
+                ${'in_progress'}
+              )
+              RETURNING *
+            `;
+            
+            console.log('Successfully created job assignment:', newAssignmentRows[0].id);
+            
+            // Update the time entry to link it to the job
+            await sql`
+              UPDATE time_entries 
+              SET job_id = ${jobId}, job_assignment_id = ${newAssignmentRows[0].id}
+              WHERE id = ${createdEntry.id}
+            `;
+            
+            console.log('Updated time entry with job_id and job_assignment_id');
+            
+            // Update the created entry object for the response
+            createdEntry.job_id = jobId;
+            createdEntry.job_assignment_id = newAssignmentRows[0].id;
+          } else {
+            console.log('Job assignment already exists for this technician and job');
+            
+            // Just link the time entry to the existing assignment
+            await sql`
+              UPDATE time_entries 
+              SET job_id = ${jobId}, job_assignment_id = ${existingAssignments[0].id}
+              WHERE id = ${createdEntry.id}
+            `;
+            
+            createdEntry.job_id = jobId;
+            createdEntry.job_assignment_id = existingAssignments[0].id;
+          }
+          
+        } catch (jobCreationError) {
+          console.error('Error creating job/assignment for unscheduled work:', jobCreationError);
+          // Don't fail the time entry creation if job creation fails
+          // The time entry is still valid without the job association
+        }
+      } else {
+        console.log('Time entry already has job_id:', createdEntry.job_id);
+      }
+      
       // Format the response to match iOS expectations
       const formattedResponse = {
-        id: rows[0].id,
-        userId: rows[0].user_id,
-        technicianName: rows[0].technician_name,
-        customerName: rows[0].customer_name,
-        jobId: rows[0].job_id || null,
-        clockInTime: rows[0].clock_in_time,
-        clockOutTime: rows[0].clock_out_time,
-        lunchStartTime: rows[0].lunch_start_time,
-        lunchEndTime: rows[0].lunch_end_time,
-        driveStartTime: rows[0].drive_start_time,
-        driveEndTime: rows[0].drive_end_time,
-        jobNotes: rows[0].job_notes || "",
-        aiSummary: rows[0].ai_summary || ""
+        id: createdEntry.id,
+        userId: createdEntry.user_id,
+        technicianName: createdEntry.technician_name,
+        customerName: createdEntry.customer_name,
+        jobId: createdEntry.job_id || null,
+        jobAssignmentId: createdEntry.job_assignment_id || null,
+        clockInTime: createdEntry.clock_in_time,
+        clockOutTime: createdEntry.clock_out_time,
+        lunchStartTime: createdEntry.lunch_start_time,
+        lunchEndTime: createdEntry.lunch_end_time,
+        driveStartTime: createdEntry.drive_start_time,
+        driveEndTime: createdEntry.drive_end_time,
+        jobNotes: createdEntry.job_notes || "",
+        aiSummary: createdEntry.ai_summary || ""
       };
       
       res.status(201).json(formattedResponse);
