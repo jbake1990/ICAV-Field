@@ -860,13 +860,38 @@ class TimeTrackerViewModel: ObservableObject {
                 entry.jobAssignmentId == nil // Manual entries don't have assignment IDs
             }
             
-            if existingManualEntry != nil {
+            if let existingEntry = existingManualEntry {
                 print("📋 Skipping scheduled entry for \(job.customerName) - manual entry already exists")
                 
-                // Update the existing manual entry to link it to the job assignment
-                if let index = timeEntries.firstIndex(where: { $0.id == existingManualEntry!.id }) {
-                    timeEntries[index].jobAssignmentId = assignment.id
-                    timeEntries[index].jobId = job.id
+                // Create a new entry with the job assignment linked (since properties are immutable)
+                if let index = timeEntries.firstIndex(where: { $0.id == existingEntry.id }) {
+                    var updatedEntry = TimeEntry(
+                        userId: existingEntry.userId,
+                        technicianName: existingEntry.technicianName,
+                        customerName: existingEntry.customerName,
+                        jobAssignmentId: assignment.id,
+                        jobId: job.id
+                    )
+                    
+                    // Preserve the original ID to maintain entry identity
+                    updatedEntry.id = existingEntry.id
+                    
+                    // Copy over all the time data from the existing entry
+                    updatedEntry.clockInTime = existingEntry.clockInTime
+                    updatedEntry.clockOutTime = existingEntry.clockOutTime
+                    updatedEntry.lunchStartTime = existingEntry.lunchStartTime
+                    updatedEntry.lunchEndTime = existingEntry.lunchEndTime
+                    updatedEntry.driveStartTime = existingEntry.driveStartTime
+                    updatedEntry.driveEndTime = existingEntry.driveEndTime
+                    updatedEntry.aiSummary = existingEntry.aiSummary
+                    updatedEntry.serverId = existingEntry.serverId
+                    updatedEntry.isSynced = existingEntry.isSynced
+                    updatedEntry.needsSync = existingEntry.needsSync
+                    updatedEntry.lastModified = existingEntry.lastModified
+                    updatedEntry.markedForDeletion = existingEntry.markedForDeletion
+                    
+                    // Replace the old entry with the updated one
+                    timeEntries[index] = updatedEntry
                     print("🔗 Linked manual entry to job assignment: \(assignment.id)")
                 }
                 continue
