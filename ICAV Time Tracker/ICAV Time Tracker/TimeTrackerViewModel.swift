@@ -856,7 +856,7 @@ class TimeTrackerViewModel: ObservableObject {
             print("📋 Creating time entry for scheduled job: \(job.customerName)")
             
             // Create a new time entry for this job assignment
-            var newEntry = TimeEntry(
+            let newEntry = TimeEntry(
                 userId: currentUser.id,
                 technicianName: currentUser.displayName,
                 customerName: job.customerName,

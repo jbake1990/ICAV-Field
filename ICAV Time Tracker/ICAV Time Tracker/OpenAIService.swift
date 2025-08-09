@@ -169,7 +169,7 @@ class OpenAIService: ObservableObject {
             let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
             
             if trimmedLine.lowercased().contains("**customer:**") {
-                if !tempContent.isEmpty() && !currentSection.isEmpty() {
+                if !tempContent.isEmpty && !currentSection.isEmpty {
                     assignContent(section: currentSection, content: tempContent, 
                                 customerName: &customerName, workDescription: &workDescription, 
                                 followUpSteps: &followUpSteps, additionalNotes: &additionalNotes)
@@ -177,7 +177,7 @@ class OpenAIService: ObservableObject {
                 currentSection = "customer"
                 tempContent = extractValue(from: trimmedLine, after: "customer:")
             } else if trimmedLine.lowercased().contains("**work performed:**") {
-                if !tempContent.isEmpty() && !currentSection.isEmpty() {
+                if !tempContent.isEmpty && !currentSection.isEmpty {
                     assignContent(section: currentSection, content: tempContent, 
                                 customerName: &customerName, workDescription: &workDescription, 
                                 followUpSteps: &followUpSteps, additionalNotes: &additionalNotes)
@@ -185,7 +185,7 @@ class OpenAIService: ObservableObject {
                 currentSection = "work"
                 tempContent = extractValue(from: trimmedLine, after: "work performed:")
             } else if trimmedLine.lowercased().contains("**follow-up required:**") {
-                if !tempContent.isEmpty() && !currentSection.isEmpty() {
+                if !tempContent.isEmpty && !currentSection.isEmpty {
                     assignContent(section: currentSection, content: tempContent, 
                                 customerName: &customerName, workDescription: &workDescription, 
                                 followUpSteps: &followUpSteps, additionalNotes: &additionalNotes)
@@ -193,20 +193,20 @@ class OpenAIService: ObservableObject {
                 currentSection = "followup"
                 tempContent = extractValue(from: trimmedLine, after: "follow-up required:")
             } else if trimmedLine.lowercased().contains("**additional notes:**") {
-                if !tempContent.isEmpty() && !currentSection.isEmpty() {
+                if !tempContent.isEmpty && !currentSection.isEmpty {
                     assignContent(section: currentSection, content: tempContent, 
                                 customerName: &customerName, workDescription: &workDescription, 
                                 followUpSteps: &followUpSteps, additionalNotes: &additionalNotes)
                 }
                 currentSection = "additional"
                 tempContent = extractValue(from: trimmedLine, after: "additional notes:")
-            } else if !trimmedLine.isEmpty() && !currentSection.isEmpty() {
+            } else if !trimmedLine.isEmpty && !currentSection.isEmpty {
                 tempContent += "\n" + trimmedLine
             }
         }
         
         // Handle the last section
-        if !tempContent.isEmpty() && !currentSection.isEmpty() {
+        if !tempContent.isEmpty && !currentSection.isEmpty {
             assignContent(section: currentSection, content: tempContent, 
                         customerName: &customerName, workDescription: &workDescription, 
                         followUpSteps: &followUpSteps, additionalNotes: &additionalNotes)
@@ -214,7 +214,7 @@ class OpenAIService: ObservableObject {
         
         // Combine work description and additional notes for the work description field
         var finalWorkDescription = workDescription
-        if !additionalNotes.isEmpty() {
+        if !additionalNotes.isEmpty {
             finalWorkDescription += "\n\nAdditional Notes:\n" + additionalNotes
         }
         
