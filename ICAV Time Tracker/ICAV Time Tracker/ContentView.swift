@@ -13,6 +13,7 @@ struct ContentView: View {
     @StateObject private var viewModel: TimeTrackerViewModel
     @StateObject private var pdfGenerator = PDFGenerator()
     @StateObject private var shareManager = ShareManager()
+    @StateObject private var openAIService: OpenAIService
     @State private var showingExportSheet = false
     // Add these:
     @State private var selectedJob: TimeEntry? = nil
@@ -358,7 +359,8 @@ struct ContentView: View {
                         jobNotesText = ""
                         aiSummary = ""
                     },
-                    shareManager: shareManager
+                    shareManager: shareManager,
+                    openAIService: openAIService
                 )
             }
             .sheet(isPresented: $showingSettings) {
@@ -897,9 +899,9 @@ struct JobNotesModal: View {
     let onSave: (String, String) -> Void
     let onCancel: () -> Void
     @ObservedObject var shareManager: ShareManager
+    @ObservedObject var openAIService: OpenAIService
     
     @StateObject private var speechManager = SpeechRecognitionManager()
-    @StateObject private var openAIService: OpenAIService
     
     var body: some View {
         NavigationView {
