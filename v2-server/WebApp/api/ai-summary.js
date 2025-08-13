@@ -46,11 +46,16 @@ export default async function handler(req, res) {
     // Generate AI summary
     const summary = await generateAISummary(notes, customerName || '', openaiApiKey);
 
-    // Log the AI usage for monitoring
-    await sql`
-      INSERT INTO ai_usage_log (user_id, notes_length, timestamp)
-      VALUES (${user.userId}, ${notes.length}, NOW())
-    `;
+    // Log the AI usage for monitoring (with error handling for missing table)
+    try {
+      await sql`
+        INSERT INTO ai_usage_log (user_id, notes_length, timestamp)
+        VALUES (${user.userId}, ${notes.length}, NOW())
+      `;
+    } catch (error) {
+      console.warn('Could not log AI usage (table may not exist):', error.message);
+      // Continue without logging - this is not critical for the summary generation
+    }
 
     return res.status(200).json({ summary });
 
