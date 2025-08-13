@@ -1,8 +1,4 @@
-export default async function handler(req, res) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
+module.exports = async function handler(req, res) {
   try {
     const openaiApiKey = process.env.OPENAI_API_KEY;
     
@@ -13,9 +9,10 @@ export default async function handler(req, res) {
       keyPrefix: openaiApiKey ? openaiApiKey.substring(0, 10) + '...' : 'none',
       timestamp: new Date().toISOString()
     });
-
   } catch (error) {
-    console.error('Test AI Config Error:', error);
-    return res.status(500).json({ error: 'Failed to check configuration' });
+    return res.status(500).json({ 
+      error: 'Test failed',
+      message: error.message 
+    });
   }
-}
+};
