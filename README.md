@@ -1,33 +1,30 @@
-# ICAV Time Tracker v2 Server
+# ICAV Time Tracker - App Information
 
-This is the v2 server for the ICAV Time Tracker application, featuring:
+This repository contains the public-facing web pages for ICAV Time Tracker, including privacy policy and support documentation.
 
-## New Features in v2
-- ✅ Drive time tracking (drive_start_time, drive_end_time)
-- ✅ Driving-only entries (clock_in_time can be NULL)
-- ✅ DELETE functionality for time entries
-- ✅ Enhanced API with better error handling
-- ✅ Support for multiple clock in/outs per job
+## Pages
 
-## Database Schema v2
-The v2 schema includes:
-- `drive_start_time` and `drive_end_time` columns
-- `clock_in_time` is now nullable to support driving-only entries
-- Additional indexes for drive time columns
-- DELETE endpoint for time entries
+- **[Home](index.html)** - App overview and download links
+- **[Privacy Policy](privacy-policy.html)** - Privacy policy and data handling information
+- **[Support Center](support.html)** - User support documentation and troubleshooting
 
-## Deployment
-1. Deploy to Vercel with PostgreSQL database
-2. Run the schema_v2.sql to initialize the database
-3. The API supports both web and mobile app clients
+## GitHub Pages
 
-## API Endpoints
-- `GET /api/time-entries` - Fetch time entries
-- `POST /api/time-entries` - Create/update time entries
-- `DELETE /api/time-entries/{id}` - Delete time entries
-- `POST /api/auth` - Authentication
-- `GET /api/users` - User management
-- `GET /api/health` - Health check
+This branch is configured for GitHub Pages deployment. The pages are automatically served from the root directory.
 
-## Development
-This server is designed to work with the v2 iOS and Android apps.
+### URLs
+- Home: `https://[username].github.io/[repository-name]/`
+- Privacy Policy: `https://[username].github.io/[repository-name]/privacy-policy.html`
+- Support: `https://[username].github.io/[repository-name]/support.html`
+
+## Customization
+
+Before deploying, remember to update:
+- Contact information in all HTML files
+- App store download links
+- Company-specific details
+- Support email and phone numbers
+
+---
+
+*ICAV Time Tracker - Professional Field Service Management*
