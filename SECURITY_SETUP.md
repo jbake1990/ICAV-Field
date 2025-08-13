@@ -1,82 +1,176 @@
-# API Key Security Setup
+# 🔒 AI API Security Setup Guide
 
-## 🔒 Secure Configuration Implementation
+## Overview
+This guide explains the security measures implemented to protect your OpenAI API key when distributing the mobile apps through app stores.
 
-This project uses secure configuration files to protect sensitive API keys and credentials from being exposed in source control.
+## 🛡️ Security Architecture
 
-## 📁 File Structure
+### Before (Insecure)
+- API key hardcoded in mobile apps
+- Anyone with the app could extract and use your API key
+- No usage monitoring or rate limiting
+- Direct access to OpenAI API from mobile devices
 
-### Protected Files (Not Committed)
-- `ICAV Time Tracker/ICAV Time Tracker/Config.swift` - iOS configuration
-- `Android App/app/src/main/java/com/example/icavtimetracker/Config.kt` - Android configuration
+### After (Secure)
+- API key stored securely on server only
+- Mobile apps require authentication to access AI features
+- Server-side rate limiting and usage monitoring
+- All AI requests go through your authenticated server
 
-### Template Files (Safe to Commit)
-- `ICAV Time Tracker/ICAV Time Tracker/Config.swift.template` - iOS template
-- `Android App/app/src/main/java/com/example/icavtimetracker/Config.kt.template` - Android template
+## 🔧 Implementation Details
 
-## 🚀 Setup Instructions
+### 1. Server-Side AI Endpoint
+- **File**: `v2-server/WebApp/api/ai-summary.js`
+- **Authentication**: Requires valid JWT token
+- **Rate Limiting**: Logs all usage for monitoring
+- **Error Handling**: Proper error responses for unauthorized access
 
-### For New Developers
+### 2. Database Monitoring
+- **Table**: `ai_usage_log`
+- **Tracks**: User ID, notes length, timestamp
+- **Purpose**: Monitor usage, detect abuse, billing
 
-1. **Copy the template files:**
-   ```bash
-   # iOS
-   cp "ICAV Time Tracker/ICAV Time Tracker/Config.swift.template" "ICAV Time Tracker/ICAV Time Tracker/Config.swift"
-   
-   # Android
-   cp "Android App/app/src/main/java/com/example/icavtimetracker/Config.kt.template" "Android App/app/src/main/java/com/example/icavtimetracker/Config.kt"
-   ```
+### 3. Mobile App Changes
+- **iOS**: `OpenAIService.swift` - Now calls server endpoint
+- **Android**: `OpenAIService.kt` - Now calls server endpoint
+- **Authentication**: Uses existing auth token for API access
+- **No API Keys**: Completely removed from mobile apps
 
-2. **Add your API keys:**
-   - Get your OpenAI API key from [OpenAI Platform](https://platform.openai.com/api-keys)
-   - Replace `YOUR_OPENAI_API_KEY_HERE` in both config files
-   - Update server URLs if needed
+## 🚀 Deployment Steps
 
-3. **Verify .gitignore protection:**
-   - Run `git status` - Config files should NOT appear as changes
-   - If they do appear, check that .gitignore is properly configured
+### 1. Server Environment Variables
+Add to your Vercel environment variables:
+```bash
+OPENAI_API_KEY=your_actual_openai_api_key_here
+```
 
-## 🛡️ Security Features
+### 2. Database Migration
+Run the AI usage log migration:
+```sql
+-- Execute migrate_ai_usage_log.sql
+```
 
-### ✅ Protected by .gitignore
-- Config files are automatically ignored by git
-- API keys never get committed to version control
-- Safe to work on public repositories
+### 3. Mobile App Distribution
+- Remove any existing API keys from mobile apps
+- Update Config files to only include server URL
+- Test authentication flow before app store submission
 
-### ✅ Template System
-- New developers get clear setup instructions
-- No secrets in template files
-- Easy onboarding process
+## 📊 Usage Monitoring
 
-### ✅ Runtime Security
-- Keys loaded at app startup
-- No hardcoded secrets in source code
-- Compile-time verification
+### Database Queries for Monitoring
+```sql
+-- Daily usage by user
+SELECT 
+    u.username,
+    COUNT(*) as daily_requests,
+    SUM(notes_length) as total_chars_processed
+FROM ai_usage_log aul
+JOIN users u ON aul.user_id = u.id
+WHERE DATE(aul.timestamp) = CURRENT_DATE
+GROUP BY u.id, u.username
+ORDER BY daily_requests DESC;
 
-## ⚠️ Important Notes
+-- Monthly usage trends
+SELECT 
+    DATE_TRUNC('month', timestamp) as month,
+    COUNT(*) as total_requests,
+    SUM(notes_length) as total_chars
+FROM ai_usage_log
+GROUP BY DATE_TRUNC('month', timestamp)
+ORDER BY month;
+```
 
-1. **Never commit Config files:** They contain real API keys
-2. **Share keys securely:** Use encrypted channels (not Slack/email)
-3. **Rotate keys regularly:** Generate new keys periodically
-4. **Monitor usage:** Check OpenAI dashboard for unexpected usage
+## 🔍 Security Benefits
+
+### ✅ API Key Protection
+- No API keys in mobile app code
+- Server-side key management
+- Environment variable security
+
+### ✅ Access Control
+- Authentication required for AI features
+- User-based usage tracking
+- Ability to revoke access per user
+
+### ✅ Usage Monitoring
+- Track who uses AI features
+- Monitor usage patterns
+- Detect potential abuse
+
+### ✅ Rate Limiting
+- Server controls request frequency
+- Prevents API key abuse
+- Cost control and management
+
+## 🚨 Security Checklist
+
+Before app store submission:
+- [ ] API key removed from all mobile app files
+- [ ] Server environment variables configured
+- [ ] Database migration executed
+- [ ] Authentication flow tested
+- [ ] AI features tested with server endpoint
+- [ ] Usage monitoring queries verified
 
 ## 🔧 Troubleshooting
 
-### "Config not found" errors
-- Ensure you've copied the template files
-- Check file names match exactly (case-sensitive)
-- Verify files are in correct directories
+### Common Issues
 
-### Git shows Config files
-- Check .gitignore syntax
-- Ensure paths are correct with proper escaping
-- Run `git rm --cached Config.swift Config.kt` if already tracked
+1. **"You must be logged in to generate AI summaries"**
+   - User needs to authenticate first
+   - Check auth token validity
 
-### OpenAI API errors
-- Verify API key is correct (starts with sk-proj-)
-- Check OpenAI account has billing set up
-- Ensure key has proper permissions
+2. **"AI service not configured"**
+   - Server environment variable not set
+   - Check Vercel environment variables
+
+3. **"Invalid response from server"**
+   - Check server logs for errors
+   - Verify API endpoint is accessible
+
+### Debug Commands
+```bash
+# Check server environment variables
+vercel env ls
+
+# View server logs
+vercel logs
+
+# Test API endpoint
+curl -X POST https://your-domain.vercel.app/api/ai-summary \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"notes":"test","customerName":"test"}'
+```
+
+## 📈 Cost Management
+
+### Monitoring API Usage
+- Track daily/monthly request counts
+- Monitor character count processed
+- Set up alerts for unusual usage patterns
+
+### Optimization Tips
+- Consider caching common summaries
+- Implement request deduplication
+- Monitor OpenAI API rate limits
+
+## 🔐 Additional Security Recommendations
+
+1. **HTTPS Only**: Ensure all API calls use HTTPS
+2. **Token Expiration**: Implement reasonable token expiration times
+3. **IP Whitelisting**: Consider IP restrictions for admin access
+4. **Audit Logging**: Log all authentication attempts
+5. **Regular Key Rotation**: Rotate API keys periodically
 
 ## 📞 Support
 
-If you need access to API keys or encounter setup issues, contact the project maintainer securely.
+If you encounter any security issues:
+1. Check server logs immediately
+2. Review usage patterns for anomalies
+3. Consider temporarily disabling AI features
+4. Contact support with detailed error information
+
+---
+
+**Remember**: This security setup ensures your OpenAI API key remains protected even when your app is distributed through public app stores. The key is never exposed to end users and all usage is properly authenticated and monitored.

@@ -10,6 +10,5 @@ package com.example.icavtimetracker
  * 4. Never commit the Config.kt file (it's in .gitignore)
  */
 object Config {
-    const val OPENAI_API_KEY = "YOUR_OPENAI_API_KEY_HERE"
     const val SERVER_URL = "https://icav-field.vercel.app/"
 }

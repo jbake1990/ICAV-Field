@@ -14,6 +14,5 @@
 import Foundation
 
 struct Config {
-    static let openAIAPIKey = "YOUR_OPENAI_API_KEY_HERE"
     static let serverURL = "https://icav-field.vercel.app"
 }

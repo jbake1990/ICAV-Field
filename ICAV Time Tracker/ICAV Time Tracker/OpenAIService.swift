@@ -3,41 +3,15 @@ import Foundation
 @MainActor
 class OpenAIService: ObservableObject {
     
-    // API key loaded from secure Config file (not committed to git)
-    private let apiKey = Config.openAIAPIKey
-    private let baseURL = "https://api.openai.com/v1/chat/completions"
+    // Use server endpoint instead of direct OpenAI API
+    private let serverURL = Config.serverURL
+    private let apiService = APIService.shared
     
     @Published var isLoading = false
     @Published var errorMessage = ""
     
-    struct OpenAIResponse: Codable {
-        let id: String
-        let choices: [Choice]
-        
-        struct Choice: Codable {
-            let message: Message
-            
-            struct Message: Codable {
-                let content: String
-            }
-        }
-    }
-    
-    struct OpenAIRequest: Codable {
-        let model: String
-        let messages: [Message]
-        let maxTokens: Int
-        let temperature: Double
-        
-        struct Message: Codable {
-            let role: String
-            let content: String
-        }
-        
-        enum CodingKeys: String, CodingKey {
-            case model, messages, temperature
-            case maxTokens = "max_tokens"
-        }
+    struct ServerAIResponse: Codable {
+        let summary: String
     }
     
     struct JobSummary {
@@ -48,12 +22,12 @@ class OpenAIService: ObservableObject {
     }
     
     func summarizeJobNotes(_ notes: String, customerName: String = "") async throws -> JobSummary {
-        guard !apiKey.isEmpty && apiKey != "YOUR_OPENAI_API_KEY_HERE" else {
-            throw OpenAIError.missingAPIKey
-        }
-        
         guard !notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw OpenAIError.emptyNotes
+        }
+        
+        guard apiService.authToken != nil else {
+            throw OpenAIError.notAuthenticated
         }
         
         isLoading = true
@@ -64,7 +38,7 @@ class OpenAIService: ObservableObject {
         }
         
         do {
-            let summary = try await performSummarization(notes: notes, customerName: customerName)
+            let summary = try await performServerSummarization(notes: notes, customerName: customerName)
             return summary
         } catch {
             let errorMsg = "Failed to generate summary: \(error.localizedDescription)"
@@ -73,30 +47,27 @@ class OpenAIService: ObservableObject {
         }
     }
     
-    private func performSummarization(notes: String, customerName: String) async throws -> JobSummary {
-        guard let url = URL(string: baseURL) else {
+    private func performServerSummarization(notes: String, customerName: String) async throws -> JobSummary {
+        guard let url = URL(string: "\(serverURL)/api/ai-summary") else {
             throw OpenAIError.invalidURL
         }
         
-        let prompt = createSummarizationPrompt(notes: notes, customerName: customerName)
-        
-        let request = OpenAIRequest(
-            model: "gpt-3.5-turbo",
-            messages: [
-                OpenAIRequest.Message(role: "system", content: "You are an expert technical writer who creates detailed, professional job summaries that can be shared with customers. Your role is to transform brief technician notes into comprehensive, customer-friendly reports that explain what work was performed and what follow-up actions are needed."),
-                OpenAIRequest.Message(role: "user", content: prompt)
-            ],
-            maxTokens: 600,
-            temperature: 0.2
-        )
+        guard let authToken = apiService.authToken else {
+            throw OpenAIError.notAuthenticated
+        }
         
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "POST"
-        urlRequest.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        urlRequest.addValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
         urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
         
+        let requestBody = [
+            "notes": notes,
+            "customerName": customerName
+        ]
+        
         let encoder = JSONEncoder()
-        urlRequest.httpBody = try encoder.encode(request)
+        urlRequest.httpBody = try encoder.encode(requestBody)
         
         let (data, response) = try await URLSession.shared.data(for: urlRequest)
         
@@ -106,53 +77,19 @@ class OpenAIService: ObservableObject {
         
         guard httpResponse.statusCode == 200 else {
             if let errorData = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let error = errorData["error"] as? [String: Any],
-               let message = error["message"] as? String {
-                throw OpenAIError.apiError(message)
+               let error = errorData["error"] as? String {
+                throw OpenAIError.apiError(error)
             }
             throw OpenAIError.httpError(httpResponse.statusCode)
         }
         
         let decoder = JSONDecoder()
-        let openAIResponse = try decoder.decode(OpenAIResponse.self, from: data)
+        let serverResponse = try decoder.decode(ServerAIResponse.self, from: data)
         
-        guard let choice = openAIResponse.choices.first else {
-            throw OpenAIError.noResponse
-        }
-        
-        return parseSummaryResponse(choice.message.content)
+        return parseSummaryResponse(serverResponse.summary)
     }
     
-    private func createSummarizationPrompt(notes: String, customerName: String) -> String {
-        let customerContext = customerName.isEmpty ? "" : "Customer: \(customerName)\n"
-        
-        return """
-        \(customerContext)Technician Notes: \(notes)
-        
-        Transform these brief technician notes into a comprehensive, professional job summary for internal documentation and potential client communication. The summary should be detailed enough to understand exactly what work was performed and what follow-up actions are needed.
-        
-        Please create a detailed job summary with the following format:
-        
-        **Customer Info:** [Extract or use provided customer name, or "Not specified" if not found]
-        
-        **Work Summary:** 
-        [Write a brief paragraph explaining the overall work performed, then include bullet points with specific details about what was accomplished. Expand on technical abbreviations, explain the purpose of each task, and describe any issues that were identified and resolved. Use clear, professional language suitable for both technical and non-technical audiences.]
-        
-        **To-Do/Follow Up:** 
-        [Create a checklist of specific to-do items or follow-up actions needed. Each item should be a separate bullet point starting with "- [ ]". If no follow-up is required, simply write "None". Be specific about what needs to be done, when it should be completed, and who should do it.]
-        
-        Guidelines:
-        - Write in third-person, professional documentation style
-        - Avoid using "you", "your", or other second-person language
-        - Explain technical terms in clear language
-        - Be specific about what was accomplished
-        - Provide context for why work was necessary
-        - Give clear expectations for any follow-up
-        - Maintain a professional, informative tone
-        - Include timeframes when relevant
-        - Mention any testing or verification performed
-        """
-    }
+
     
     private func parseSummaryResponse(_ content: String) -> JobSummary {
         let lines = content.components(separatedBy: .newlines)
@@ -245,7 +182,7 @@ class OpenAIService: ObservableObject {
 }
 
 enum OpenAIError: LocalizedError {
-    case missingAPIKey
+    case notAuthenticated
     case emptyNotes
     case invalidURL
     case invalidResponse
@@ -255,20 +192,20 @@ enum OpenAIError: LocalizedError {
     
     var errorDescription: String? {
         switch self {
-        case .missingAPIKey:
-            return "OpenAI API key not configured. Please contact support."
+        case .notAuthenticated:
+            return "You must be logged in to generate AI summaries."
         case .emptyNotes:
             return "Please enter some job notes before generating a summary."
         case .invalidURL:
             return "Invalid API endpoint configuration."
         case .invalidResponse:
-            return "Invalid response from OpenAI API."
+            return "Invalid response from server."
         case .noResponse:
-            return "No response received from OpenAI API."
+            return "No response received from server."
         case .httpError(let code):
             return "API request failed with status code \(code)."
         case .apiError(let message):
-            return "OpenAI API Error: \(message)"
+            return "Server Error: \(message)"
         }
     }
 } 

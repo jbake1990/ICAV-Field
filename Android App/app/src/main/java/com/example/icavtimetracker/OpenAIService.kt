@@ -15,9 +15,8 @@ import java.io.IOException
 
 class OpenAIService {
     
-    // API key loaded from secure Config file (not committed to git)
-    private val apiKey = Config.OPENAI_API_KEY
-    private val baseUrl = "https://api.openai.com/v1/chat/completions"
+    // Use server endpoint instead of direct OpenAI API
+    private val serverUrl = Config.SERVER_URL
     
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -44,20 +43,9 @@ class OpenAIService {
     }
     
     @Serializable
-    data class OpenAIResponse(
-        val id: String,
-        val choices: List<Choice>
-    ) {
-        @Serializable
-        data class Choice(
-            val message: Message
-        ) {
-            @Serializable
-            data class Message(
-                val content: String
-            )
-        }
-    }
+    data class ServerAIResponse(
+        val summary: String
+    )
     
     data class JobSummary(
         val customerName: String,
@@ -67,10 +55,6 @@ class OpenAIService {
     )
     
     suspend fun summarizeJobNotes(notes: String, customerName: String = ""): Result<JobSummary> {
-        if (apiKey.isEmpty() || apiKey == "YOUR_OPENAI_API_KEY_HERE") {
-            return Result.failure(OpenAIException.MissingAPIKey())
-        }
-        
         if (notes.trim().isEmpty()) {
             return Result.failure(OpenAIException.EmptyNotes())
         }
@@ -80,7 +64,7 @@ class OpenAIService {
             _errorMessage.value = ""
             
             try {
-                val result = performSummarization(notes, customerName)
+                val result = performServerSummarization(notes, customerName)
                 _isLoading.value = false
                 result
             } catch (e: Exception) {
@@ -92,32 +76,18 @@ class OpenAIService {
         }
     }
     
-    private suspend fun performSummarization(notes: String, customerName: String): Result<JobSummary> {
-        val prompt = createSummarizationPrompt(notes, customerName)
-        
-        val request = OpenAIRequest(
-            model = "gpt-3.5-turbo",
-            messages = listOf(
-                OpenAIRequest.Message(
-                    role = "system",
-                    content = "You are an expert technical writer who creates detailed, professional job summaries that can be shared with customers. Your role is to transform brief technician notes into comprehensive, customer-friendly reports that explain what work was performed and what follow-up actions are needed."
-                ),
-                OpenAIRequest.Message(
-                    role = "user",
-                    content = prompt
-                )
-            ),
-            maxTokens = 600,
-            temperature = 0.2
+    private suspend fun performServerSummarization(notes: String, customerName: String): Result<JobSummary> {
+        val requestBody = mapOf(
+            "notes" to notes,
+            "customerName" to customerName
         )
         
-        val requestJson = json.encodeToString(OpenAIRequest.serializer(), request)
-        val requestBody = requestJson.toRequestBody("application/json".toMediaType())
+        val requestJson = json.encodeToString(requestBody)
+        val body = requestJson.toRequestBody("application/json".toMediaType())
         
         val httpRequest = Request.Builder()
-            .url(baseUrl)
-            .post(requestBody)
-            .addHeader("Authorization", "Bearer $apiKey")
+            .url("$serverUrl/api/ai-summary")
+            .post(body)
             .addHeader("Content-Type", "application/json")
             .build()
         
@@ -128,23 +98,15 @@ class OpenAIService {
                 response.isSuccessful -> {
                     val responseBody = response.body?.string()
                     if (responseBody != null) {
-                        val openAIResponse = json.decodeFromString(OpenAIResponse.serializer(), responseBody)
-                        val choice = openAIResponse.choices.firstOrNull()
-                        if (choice != null) {
-                            val summary = parseSummaryResponse(choice.message.content)
-                            Result.success(summary)
-                        } else {
-                            Result.failure(OpenAIException.NoResponse())
-                        }
+                        val serverResponse = json.decodeFromString(ServerAIResponse.serializer(), responseBody)
+                        val summary = parseSummaryResponse(serverResponse.summary)
+                        Result.success(summary)
                     } else {
                         Result.failure(OpenAIException.InvalidResponse())
                     }
                 }
                 response.code == 401 -> {
-                    Result.failure(OpenAIException.Unauthorized())
-                }
-                response.code == 429 -> {
-                    Result.failure(OpenAIException.RateLimited())
+                    Result.failure(OpenAIException.NotAuthenticated())
                 }
                 else -> {
                     // Try to parse error message from response
@@ -152,7 +114,7 @@ class OpenAIService {
                     val errorMsg = if (errorBody != null) {
                         try {
                             val errorJson = json.parseToJsonElement(errorBody).toString()
-                            "API Error (${response.code}): $errorJson"
+                            "Server Error (${response.code}): $errorJson"
                         } catch (e: Exception) {
                             "HTTP Error ${response.code}: ${response.message}"
                         }
@@ -169,36 +131,7 @@ class OpenAIService {
         }
     }
     
-    private fun createSummarizationPrompt(notes: String, customerName: String): String {
-        val customerContext = if (customerName.isEmpty()) "" else "Customer: $customerName\n"
-        
-        return """
-        ${customerContext}Technician Notes: $notes
-        
-        Transform these brief technician notes into a comprehensive, professional job summary for internal documentation and potential client communication. The summary should be detailed enough to understand exactly what work was performed and what follow-up actions are needed.
-        
-        Please create a detailed job summary with the following format:
-        
-        **Customer Info:** [Extract or use provided customer name, or "Not specified" if not found]
-        
-        **Work Summary:** 
-        [Write a brief paragraph explaining the overall work performed, then include bullet points with specific details about what was accomplished. Expand on technical abbreviations, explain the purpose of each task, and describe any issues that were identified and resolved. Use clear, professional language suitable for both technical and non-technical audiences.]
-        
-        **To-Do/Follow Up:** 
-        [Create a checklist of specific to-do items or follow-up actions needed. Each item should be a separate bullet point starting with "- [ ]". If no follow-up is required, simply write "None". Be specific about what needs to be done, when it should be completed, and who should do it.]
-        
-        Guidelines:
-        - Write in third-person, professional documentation style
-        - Avoid using "you", "your", or other second-person language
-        - Explain technical terms in clear language
-        - Be specific about what was accomplished
-        - Provide context for why work was necessary
-        - Give clear expectations for any follow-up
-        - Maintain a professional, informative tone
-        - Include timeframes when relevant
-        - Mention any testing or verification performed
-        """.trimIndent()
-    }
+
     
     private fun parseSummaryResponse(content: String): JobSummary {
         val lines = content.lines()
@@ -315,12 +248,10 @@ class OpenAIService {
 }
 
 sealed class OpenAIException(message: String) : Exception(message) {
-    class MissingAPIKey : OpenAIException("OpenAI API key not configured. Please contact support.")
+    class NotAuthenticated : OpenAIException("You must be logged in to generate AI summaries.")
     class EmptyNotes : OpenAIException("Please enter some job notes before generating a summary.")
-    class InvalidResponse : OpenAIException("Invalid response from OpenAI API.")
-    class NoResponse : OpenAIException("No response received from OpenAI API.")
-    class Unauthorized : OpenAIException("Invalid API key. Please check your OpenAI API key.")
-    class RateLimited : OpenAIException("Rate limit exceeded. Please try again later.")
+    class InvalidResponse : OpenAIException("Invalid response from server.")
+    class NoResponse : OpenAIException("No response received from server.")
     class NetworkError(message: String) : OpenAIException("Network error: $message")
     class HttpError(val code: Int, message: String) : OpenAIException("HTTP $code: $message")
     class UnknownError(message: String) : OpenAIException("Unknown error: $message")
