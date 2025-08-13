@@ -45,10 +45,10 @@ Please create a detailed job summary with the following format:
 **Customer Info:** [Extract or use provided customer name, or "Not specified" if not found]
 
 **Work Summary:** 
-[Write a brief paragraph explaining the overall work performed, then include bullet points with specific details about what was accomplished. Expand on technical abbreviations, explain the purpose of each task, and describe any issues that were identified and resolved. Use clear, professional language suitable for both technical and non-technical audiences.]
+[Write a comprehensive paragraph explaining the overall work performed. Expand on technical abbreviations, explain the purpose of each task, describe any issues that were identified and resolved, and provide context for why the work was necessary. Use clear, professional language suitable for both technical and non-technical audiences. Do not include bullet points in this section.]
 
 **To-Do/Follow Up:** 
-[Create a checklist of specific to-do items or follow-up actions needed. Each item should be a separate bullet point starting with "- [ ]". If no follow-up is required, simply write "None". Be specific about what needs to be done, when it should be completed, and who should do it.]
+[Create a list of specific to-do items or follow-up actions needed. Each item should be a separate bullet point starting with "- [ ]" and include an estimated time to complete (e.g., "30 minutes", "2 hours", "1 day"). If no follow-up is required, simply write "None". Be specific about what needs to be done and provide realistic time estimates.]
 
 Guidelines:
 - Write in third-person, professional documentation style
@@ -58,7 +58,7 @@ Guidelines:
 - Provide context for why work was necessary
 - Give clear expectations for any follow-up
 - Maintain a professional, informative tone
-- Include timeframes when relevant
+- Include realistic time estimates for follow-up tasks
 - Mention any testing or verification performed
 `;
 
