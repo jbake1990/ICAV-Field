@@ -5,10 +5,14 @@ class OpenAIService: ObservableObject {
     
     // Use server endpoint instead of direct OpenAI API
     private let serverURL = Config.serverURL
-    private let authManager = AuthManager.shared
+    private let authManager: AuthManager
     
     @Published var isLoading = false
     @Published var errorMessage = ""
+    
+    init(authManager: AuthManager) {
+        self.authManager = authManager
+    }
     
     struct ServerAIResponse: Codable {
         let summary: String

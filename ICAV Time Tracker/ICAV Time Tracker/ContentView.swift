@@ -50,6 +50,7 @@ struct ContentView: View {
         let auth = AuthManager()
         self._authManager = StateObject(wrappedValue: auth)
         self._viewModel = StateObject(wrappedValue: TimeTrackerViewModel(authManager: auth))
+        self._openAIService = StateObject(wrappedValue: OpenAIService(authManager: auth))
     }
     
     var body: some View {
@@ -898,7 +899,7 @@ struct JobNotesModal: View {
     @ObservedObject var shareManager: ShareManager
     
     @StateObject private var speechManager = SpeechRecognitionManager()
-    @StateObject private var openAIService = OpenAIService()
+    @StateObject private var openAIService: OpenAIService
     
     var body: some View {
         NavigationView {
