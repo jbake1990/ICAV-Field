@@ -5,7 +5,7 @@ class OpenAIService: ObservableObject {
     
     // Use server endpoint instead of direct OpenAI API
     private let serverURL = Config.serverURL
-    private let apiService = APIService.shared
+    private let authManager = AuthManager.shared
     
     @Published var isLoading = false
     @Published var errorMessage = ""
@@ -26,7 +26,7 @@ class OpenAIService: ObservableObject {
             throw OpenAIError.emptyNotes
         }
         
-        guard apiService.authToken != nil else {
+        guard authManager.authToken != nil else {
             throw OpenAIError.notAuthenticated
         }
         
@@ -52,7 +52,7 @@ class OpenAIService: ObservableObject {
             throw OpenAIError.invalidURL
         }
         
-        guard let authToken = apiService.authToken else {
+        guard let authToken = authManager.authToken else {
             throw OpenAIError.notAuthenticated
         }
         
