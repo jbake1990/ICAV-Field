@@ -1,5 +1,28 @@
 import { sql } from '@vercel/postgres';
-import { verifyToken } from '../auth.js';
+
+// Helper function to verify user session and get user ID
+async function verifyUserSession(authHeader) {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw new Error('No valid authorization header');
+  }
+  
+  const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+  
+  const { rows } = await sql`
+    SELECT s.user_id, u.id, u.username, u.display_name, u.email, u.role
+    FROM user_sessions s
+    JOIN users u ON s.user_id = u.id
+    WHERE s.session_token = ${token} 
+      AND s.expires_at > NOW()
+      AND u.is_active = true
+  `;
+  
+  if (rows.length === 0) {
+    throw new Error('Invalid or expired session');
+  }
+  
+  return rows[0];
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -8,28 +31,7 @@ export default async function handler(req, res) {
 
   try {
     // Verify authentication
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'No authorization token provided' });
-    }
-
-    const token = authHeader.substring(7);
-    const user = await verifyToken(token);
-    
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
-    }
-
-    // Check if user is authenticated and active
-    const userResult = await sql`
-      SELECT id, username, role, is_active 
-      FROM users 
-      WHERE id = ${user.userId}
-    `;
-
-    if (!userResult.rows[0] || !userResult.rows[0].is_active) {
-      return res.status(401).json({ error: 'User not found or inactive' });
-    }
+    const user = await verifyUserSession(req.headers.authorization);
 
     const { notes, customerName } = req.body;
 
@@ -50,7 +52,7 @@ export default async function handler(req, res) {
     try {
       await sql`
         INSERT INTO ai_usage_log (user_id, notes_length, timestamp)
-        VALUES (${user.userId}, ${notes.length}, NOW())
+        VALUES (${user.user_id}, ${notes.length}, NOW())
       `;
     } catch (error) {
       console.warn('Could not log AI usage (table may not exist):', error.message);
