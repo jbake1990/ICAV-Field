@@ -1,4 +1,4 @@
-import { sql } from '@vercel/postgres';
+const { sql } = require('@vercel/postgres');
 
 // Helper function to verify user session and get user ID
 async function verifyUserSession(authHeader) {
@@ -24,7 +24,7 @@ async function verifyUserSession(authHeader) {
   return rows[0];
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
