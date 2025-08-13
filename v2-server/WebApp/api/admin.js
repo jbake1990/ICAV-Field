@@ -22,12 +22,14 @@ module.exports = async function handler(req, res) {
         return await testDatabase(req, res);
       case 'debug-auth':
         return await debugAuth(req, res);
+      case 'cleanup-entries':
+        return await cleanupEntries(req, res);
       default:
         return res.status(400).json({
           error: 'Invalid action',
           availableActions: [
             'debug-entries', 'reset-db', 'cleanup-duplicates', 
-            'list-users', 'fix-passwords', 'init-db', 'test-db', 'debug-auth'
+            'list-users', 'fix-passwords', 'init-db', 'test-db', 'debug-auth', 'cleanup-entries'
           ]
         });
     }
@@ -264,4 +266,162 @@ async function debugAuth(req, res) {
     users,
     timestamp: new Date().toISOString()
   });
+}
+
+// Cleanup entries (consolidated from cleanup-entries.js)
+async function cleanupEntries(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    // Verify user session and get user ID and role
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No valid authorization header' });
+    }
+    
+    const token = authHeader.substring(7);
+    const { rows: userSession } = await sql`
+      SELECT s.user_id, u.id, u.username, u.display_name, u.email, u.role
+      FROM user_sessions s
+      JOIN users u ON s.user_id = u.id
+      WHERE s.session_token = ${token} 
+        AND s.expires_at > NOW()
+        AND u.is_active = true
+    `;
+    
+    if (userSession.length === 0) {
+      return res.status(401).json({ error: 'Invalid or expired session' });
+    }
+    
+    const user = userSession[0];
+    
+    // Only admins can run cleanup
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        error: 'Not authorized',
+        details: 'Only administrators can run cleanup operations'
+      });
+    }
+    
+    console.log('Starting cleanup process for user:', user.username);
+    
+    // 1. Find entries with null or invalid dates
+    const { rows: invalidEntries } = await sql`
+      SELECT id, customer_name, technician_name, clock_in_time, clock_out_time, created_at
+      FROM time_entries 
+      WHERE clock_in_time IS NULL 
+         OR clock_out_time IS NULL 
+         OR clock_in_time > clock_out_time
+         OR created_at IS NULL
+    `;
+    
+    // 2. Find entries older than 30 days (excluding active entries)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const { rows: oldEntries } = await sql`
+      SELECT id, customer_name, technician_name, clock_in_time, clock_out_time, created_at
+      FROM time_entries 
+      WHERE created_at < ${thirtyDaysAgo.toISOString()}
+         AND (clock_out_time IS NOT NULL OR clock_in_time IS NULL)
+    `;
+    
+    // 3. Find duplicate entries (same user, same customer, same day)
+    const { rows: duplicateEntries } = await sql`
+      SELECT id, customer_name, technician_name, clock_in_time, created_at
+      FROM time_entries t1
+      WHERE EXISTS (
+        SELECT 1 FROM time_entries t2 
+        WHERE t2.user_id = t1.user_id 
+          AND t2.customer_name = t1.customer_name
+          AND t2.id != t1.id
+          AND DATE(t2.created_at) = DATE(t1.created_at)
+      )
+      ORDER BY customer_name, created_at
+    `;
+    
+    // 4. Delete invalid entries
+    let deletedCount = 0;
+    if (invalidEntries.length > 0) {
+      const { rowCount } = await sql`
+        DELETE FROM time_entries 
+        WHERE clock_in_time IS NULL 
+           OR clock_out_time IS NULL 
+           OR clock_in_time > clock_out_time
+           OR created_at IS NULL
+      `;
+      deletedCount += rowCount;
+    }
+    
+    // 5. Fix entries with missing job_id by linking to jobs with matching customer names
+    const { rows: entriesWithoutJobId } = await sql`
+      SELECT id, customer_name, technician_name, created_at
+      FROM time_entries 
+      WHERE job_id IS NULL
+    `;
+    
+    let updatedCount = 0;
+    for (const entry of entriesWithoutJobId) {
+      try {
+        // Find a job with matching customer name
+        const { rows: jobs } = await sql`
+          SELECT id, customer_name, title
+          FROM jobs 
+          WHERE customer_name ILIKE ${entry.customer_name}
+          ORDER BY created_at DESC
+          LIMIT 1
+        `;
+        
+        if (jobs.length > 0) {
+          const job = jobs[0];
+          
+          // Update the time entry with the job_id
+          await sql`
+            UPDATE time_entries 
+            SET job_id = ${job.id}
+            WHERE id = ${entry.id}
+          `;
+          
+          updatedCount++;
+        }
+      } catch (error) {
+        console.error(`Error updating time entry ${entry.id}:`, error);
+      }
+    }
+    
+    // 6. Get summary of remaining entries
+    const { rows: summary } = await sql`
+      SELECT 
+        COUNT(*) as total_entries,
+        COUNT(CASE WHEN clock_in_time IS NOT NULL AND clock_out_time IS NULL THEN 1 END) as active_entries,
+        COUNT(CASE WHEN clock_in_time IS NOT NULL AND clock_out_time IS NOT NULL THEN 1 END) as completed_entries,
+        COUNT(CASE WHEN clock_in_time IS NULL THEN 1 END) as invalid_entries
+      FROM time_entries
+    `;
+    
+    const responseData = {
+      success: true,
+      message: 'Cleanup completed successfully',
+      deletedCount: deletedCount,
+      updatedCount: updatedCount,
+      invalidEntriesFound: invalidEntries.length,
+      oldEntriesFound: oldEntries.length,
+      duplicateEntriesFound: duplicateEntries.length,
+      summary: summary[0],
+      timestamp: new Date().toISOString()
+    };
+    
+    return res.status(200).json(responseData);
+    
+  } catch (error) {
+    console.error('Cleanup error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Cleanup failed',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 } 
