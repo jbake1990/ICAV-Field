@@ -133,16 +133,13 @@ class OpenAIService: ObservableObject {
         
         Please create a detailed job summary with the following format:
         
-        **Customer:** [Extract or use provided customer name, or "Not specified" if not found]
+        **Customer Info:** [Extract or use provided customer name, or "Not specified" if not found]
         
-        **Work Performed:** 
-        [Provide a detailed, professional explanation of all work completed. Expand on technical abbreviations, explain the purpose of each task, and describe any issues that were identified and resolved. Use clear, professional language suitable for both technical and non-technical audiences. Include specific details about equipment worked on, parts replaced, systems tested, etc.]
+        **Work Summary:** 
+        [Write a brief paragraph explaining the overall work performed, then include bullet points with specific details about what was accomplished. Expand on technical abbreviations, explain the purpose of each task, and describe any issues that were identified and resolved. Use clear, professional language suitable for both technical and non-technical audiences.]
         
-        **Follow-up Required:** 
-        [Provide detailed information about any follow-up actions needed. Explain WHY the follow-up is necessary, WHEN it should be completed, and WHAT should be expected. If no follow-up is needed, explain that the work is complete and what should be monitored going forward.]
-        
-        **Additional Notes:**
-        [Include any warranty information, maintenance recommendations, or preventive measures that should be noted. Mention any observations about equipment condition or potential future needs.]
+        **To-Do/Follow Up:** 
+        [Create a checklist of specific to-do items or follow-up actions needed. Each item should be a separate bullet point starting with "- [ ]". If no follow-up is required, simply write "None". Be specific about what needs to be done, when it should be completed, and who should do it.]
         
         Guidelines:
         - Write in third-person, professional documentation style
@@ -169,38 +166,30 @@ class OpenAIService: ObservableObject {
         for line in lines {
             let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
             
-            if trimmedLine.lowercased().contains("**customer:**") {
+            if trimmedLine.lowercased().contains("**customer info:**") {
                 if !tempContent.isEmpty && !currentSection.isEmpty {
                     assignContent(section: currentSection, content: tempContent, 
                                 customerName: &customerName, workDescription: &workDescription, 
                                 followUpSteps: &followUpSteps, additionalNotes: &additionalNotes)
                 }
                 currentSection = "customer"
-                tempContent = extractValue(from: trimmedLine, after: "customer:")
-            } else if trimmedLine.lowercased().contains("**work performed:**") {
+                tempContent = extractValue(from: trimmedLine, after: "customer info:")
+            } else if trimmedLine.lowercased().contains("**work summary:**") {
                 if !tempContent.isEmpty && !currentSection.isEmpty {
                     assignContent(section: currentSection, content: tempContent, 
                                 customerName: &customerName, workDescription: &workDescription, 
                                 followUpSteps: &followUpSteps, additionalNotes: &additionalNotes)
                 }
                 currentSection = "work"
-                tempContent = extractValue(from: trimmedLine, after: "work performed:")
-            } else if trimmedLine.lowercased().contains("**follow-up required:**") {
+                tempContent = extractValue(from: trimmedLine, after: "work summary:")
+            } else if trimmedLine.lowercased().contains("**to-do/follow up:**") {
                 if !tempContent.isEmpty && !currentSection.isEmpty {
                     assignContent(section: currentSection, content: tempContent, 
                                 customerName: &customerName, workDescription: &workDescription, 
                                 followUpSteps: &followUpSteps, additionalNotes: &additionalNotes)
                 }
                 currentSection = "followup"
-                tempContent = extractValue(from: trimmedLine, after: "follow-up required:")
-            } else if trimmedLine.lowercased().contains("**additional notes:**") {
-                if !tempContent.isEmpty && !currentSection.isEmpty {
-                    assignContent(section: currentSection, content: tempContent, 
-                                customerName: &customerName, workDescription: &workDescription, 
-                                followUpSteps: &followUpSteps, additionalNotes: &additionalNotes)
-                }
-                currentSection = "additional"
-                tempContent = extractValue(from: trimmedLine, after: "additional notes:")
+                tempContent = extractValue(from: trimmedLine, after: "to-do/follow up:")
             } else if !trimmedLine.isEmpty && !currentSection.isEmpty {
                 tempContent += "\n" + trimmedLine
             }
@@ -213,15 +202,9 @@ class OpenAIService: ObservableObject {
                         followUpSteps: &followUpSteps, additionalNotes: &additionalNotes)
         }
         
-        // Combine work description and additional notes for the work description field
-        var finalWorkDescription = workDescription
-        if !additionalNotes.isEmpty {
-            finalWorkDescription += "\n\nAdditional Notes:\n" + additionalNotes
-        }
-        
         return JobSummary(
             customerName: customerName,
-            workDescription: finalWorkDescription,
+            workDescription: workDescription,
             followUpSteps: followUpSteps,
             fullSummary: content
         )
