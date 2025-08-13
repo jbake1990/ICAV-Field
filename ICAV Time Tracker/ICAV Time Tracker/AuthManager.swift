@@ -21,13 +21,15 @@ class AuthManager: ObservableObject {
     private let tokenKey = "AuthToken"
     private let tokenExpiresKey = "TokenExpiresAt"
     private let lastVerificationKey = "LastTokenVerification"
+    private let savedUsernameKey = "savedUsername"
+    private let savedPasswordKey = "savedPassword"
     private let apiService = APIService.shared
     
     // Test user credentials for development (fallback)
     private let testUsername = "test"
     private let testPassword = "test123"
     
-    private var authToken: String? {
+    var authToken: String? {
         get { userDefaults.string(forKey: tokenKey) }
         set { 
             if let token = newValue {
@@ -38,7 +40,7 @@ class AuthManager: ObservableObject {
         }
     }
     
-    private var tokenExpiresAt: Date? {
+    var tokenExpiresAt: Date? {
         get { userDefaults.object(forKey: tokenExpiresKey) as? Date }
         set { 
             if let date = newValue {
@@ -49,7 +51,7 @@ class AuthManager: ObservableObject {
         }
     }
     
-    private var lastTokenVerification: Date? {
+    var lastTokenVerification: Date? {
         get { userDefaults.object(forKey: lastVerificationKey) as? Date }
         set { 
             if let date = newValue {
@@ -62,11 +64,9 @@ class AuthManager: ObservableObject {
     
     init() {
         loadUser()
-        // Verify existing session on app start
-        if let token = authToken {
-            Task {
-                await verifySession(token: token)
-            }
+        // Try to authenticate with saved credentials on app start
+        Task {
+            await attemptAutoLogin()
         }
     }
     
@@ -233,13 +233,13 @@ class AuthManager: ObservableObject {
         }
     }
     
-    private func parseExpiresAt(_ expiresAt: String) -> Date? {
+    func parseExpiresAt(_ expiresAt: String) -> Date? {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter.date(from: expiresAt)
     }
     
-    private func saveUser() {
+    func saveUser() {
         if let encoded = try? JSONEncoder().encode(currentUser) {
             userDefaults.set(encoded, forKey: userKey)
         }
@@ -271,5 +271,73 @@ class AuthManager: ObservableObject {
     // Check if user is currently online
     var isOnline: Bool {
         return apiService.isOnline
+    }
+    
+    // Auto-login with saved credentials
+    private func attemptAutoLogin() async {
+        let savedUsername = userDefaults.string(forKey: savedUsernameKey)
+        let savedPassword = userDefaults.string(forKey: savedPasswordKey)
+        
+        // First try to verify existing session
+        if let token = authToken {
+            do {
+                let authResponse = try await apiService.verifySession(token: token)
+                let user = apiService.convertToUser(authResponse.user)
+                
+                await MainActor.run {
+                    self.currentUser = user
+                    self.isAuthenticated = true
+                    self.authToken = authResponse.token
+                    self.tokenExpiresAt = parseExpiresAt(authResponse.expiresAt)
+                    self.lastTokenVerification = Date()
+                }
+                return
+            } catch {
+                // Session invalid, try saved credentials
+            }
+        }
+        
+        // Try saved credentials if available
+        if let username = savedUsername, let password = savedPassword {
+            do {
+                let authResponse = try await apiService.login(username: username, password: password)
+                let user = apiService.convertToUser(authResponse.user)
+                
+                await MainActor.run {
+                    self.currentUser = user
+                    self.isAuthenticated = true
+                    self.authToken = authResponse.token
+                    self.tokenExpiresAt = parseExpiresAt(authResponse.expiresAt)
+                    self.lastTokenVerification = Date()
+                    self.saveUser()
+                }
+            } catch {
+                // Auto-login failed, user will need to manually authenticate
+                print("Auto-login failed: \(error)")
+            }
+        }
+    }
+    
+    // Get saved credentials
+    func getSavedCredentials() -> (username: String, password: String)? {
+        let username = userDefaults.string(forKey: savedUsernameKey)
+        let password = userDefaults.string(forKey: savedPasswordKey)
+        
+        if let username = username, let password = password {
+            return (username: username, password: password)
+        }
+        return nil
+    }
+    
+    // Save credentials
+    func saveCredentials(username: String, password: String) {
+        userDefaults.set(username, forKey: savedUsernameKey)
+        userDefaults.set(password, forKey: savedPasswordKey)
+    }
+    
+    // Clear saved credentials
+    func clearSavedCredentials() {
+        userDefaults.removeObject(forKey: savedUsernameKey)
+        userDefaults.removeObject(forKey: savedPasswordKey)
     }
 } 

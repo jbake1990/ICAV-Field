@@ -14,8 +14,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.icavtimetracker.ui.screens.LoginScreen
 import com.example.icavtimetracker.ui.screens.MainScreen
+import com.example.icavtimetracker.ui.screens.SettingsScreen
 import com.example.icavtimetracker.ui.theme.ICAVTimeTrackerTheme
 import com.example.icavtimetracker.viewmodel.TimeTrackerViewModel
 
@@ -55,13 +55,15 @@ fun TimeTrackerApp(application: android.app.Application) {
     
     NavHost(
         navController = navController, 
-        startDestination = if (isAuthenticated) "main" else "login"
+        startDestination = if (isAuthenticated) "main" else "settings"
     ) {
-        composable("login") {
-            LoginScreen(
-                onLoginSuccess = {
-                    navController.navigate("main") {
-                        popUpTo("login") { inclusive = true }
+        composable("settings") {
+            SettingsScreen(
+                onBackPressed = {
+                    if (isAuthenticated) {
+                        navController.navigate("main") {
+                            popUpTo("settings") { inclusive = true }
+                        }
                     }
                 },
                 viewModel = viewModel
@@ -71,9 +73,12 @@ fun TimeTrackerApp(application: android.app.Application) {
             MainScreen(
                 onLogout = {
                     viewModel.logout()
-                    navController.navigate("login") {
+                    navController.navigate("settings") {
                         popUpTo("main") { inclusive = true }
                     }
+                },
+                onSettings = {
+                    navController.navigate("settings")
                 },
                 viewModel = viewModel
             )

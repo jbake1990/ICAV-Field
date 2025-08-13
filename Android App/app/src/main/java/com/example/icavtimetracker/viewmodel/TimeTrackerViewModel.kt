@@ -72,6 +72,8 @@ class TimeTrackerViewModel(application: Application) : AndroidViewModel(applicat
     private fun checkExistingAuth() {
         viewModelScope.launch(Dispatchers.IO) {
             Log.d("TimeTrackerViewModel", "Checking existing authentication...")
+            
+            // First try to verify existing session
             if (authManager.isAuthenticated()) {
                 val savedToken = authManager.getAuthToken()
                 val savedUser = authManager.getUser()
@@ -95,6 +97,7 @@ class TimeTrackerViewModel(application: Application) : AndroidViewModel(applicat
                                     authManager.saveAuthData(token, user, null) // Update with new token
                                     authManager.updateTokenVerification()
                                     loadTimeEntries()
+                                    return@launch
                                 },
                                 onFailure = { exception ->
                                     Log.e("TimeTrackerViewModel", "Token verification failed: ${exception.message}")
@@ -118,13 +121,38 @@ class TimeTrackerViewModel(application: Application) : AndroidViewModel(applicat
                         _isAuthenticated.value = true
                         repository.setAuthToken(savedToken)
                         loadTimeEntries()
+                        return@launch
                     }
                 } else {
                     Log.d("TimeTrackerViewModel", "Invalid saved authentication data, clearing")
                     authManager.clearAuthData()
                 }
+            }
+            
+            // Try auto-login with saved credentials if no valid session
+            Log.d("TimeTrackerViewModel", "Attempting auto-login with saved credentials...")
+            val savedCredentials = getSavedCredentials()
+            if (savedCredentials != null) {
+                try {
+                    repository.login(savedCredentials.first, savedCredentials.second).fold(
+                        onSuccess = { (token, user) ->
+                            Log.d("TimeTrackerViewModel", "Auto-login successful for user: ${user.displayName}")
+                            _authToken.value = token
+                            _currentUser.value = user
+                            _isAuthenticated.value = true
+                            repository.setAuthToken(token)
+                            authManager.saveAuthData(token, user, null)
+                            loadTimeEntries()
+                        },
+                        onFailure = { exception ->
+                            Log.e("TimeTrackerViewModel", "Auto-login failed: ${exception.message}")
+                        }
+                    )
+                } catch (e: Exception) {
+                    Log.e("TimeTrackerViewModel", "Auto-login exception: ${e.message}")
+                }
             } else {
-                Log.d("TimeTrackerViewModel", "No existing authentication found")
+                Log.d("TimeTrackerViewModel", "No saved credentials found")
             }
         }
     }
@@ -1343,4 +1371,81 @@ class TimeTrackerViewModel(application: Application) : AndroidViewModel(applicat
             Log.e("TimeTrackerViewModel", "Periodic sync failed: ${e.message}")
         }
     }
+    
+    // Settings-related methods
+    fun saveCredentials(username: String, password: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Save credentials to SharedPreferences
+                val sharedPreferences = getApplication<Application>().getSharedPreferences(
+                    "auth_prefs", android.content.Context.MODE_PRIVATE
+                )
+                sharedPreferences.edit()
+                    .putString("savedUsername", username)
+                    .putString("savedPassword", password)
+                    .apply()
+                
+                Log.d("TimeTrackerViewModel", "Credentials saved")
+            } catch (e: Exception) {
+                Log.e("TimeTrackerViewModel", "Error saving credentials: ${e.message}")
+            }
+        }
+    }
+    
+    fun getSavedCredentials(): Pair<String, String>? {
+        val sharedPreferences = getApplication<Application>().getSharedPreferences(
+            "auth_prefs", android.content.Context.MODE_PRIVATE
+        )
+        val username = sharedPreferences.getString("savedUsername", null)
+        val password = sharedPreferences.getString("savedPassword", null)
+        
+        return if (username != null && password != null) {
+            Pair(username, password)
+        } else {
+            null
+        }
+    }
+    
+    fun testConnection(username: String, password: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoading.value = true
+            _error.value = null
+            
+            try {
+                repository.login(username, password).fold(
+                    onSuccess = { (token, user) ->
+                        _authToken.value = token
+                        _currentUser.value = user
+                        _isAuthenticated.value = true
+                        
+                        // Set the auth token in the repository for API calls
+                        repository.setAuthToken(token)
+                        
+                        // Save authentication data for persistence
+                        authManager.saveAuthData(token, user, null)
+                        
+                        Log.d("TimeTrackerViewModel", "Connection test successful for user: ${user.displayName}")
+                        loadTimeEntries()
+                    },
+                    onFailure = { exception ->
+                        _error.value = exception.message ?: "Connection test failed"
+                        Log.e("TimeTrackerViewModel", "Connection test failed: ${exception.message}")
+                    }
+                )
+            } catch (e: Exception) {
+                _error.value = "Connection test error: ${e.message}"
+                Log.e("TimeTrackerViewModel", "Connection test exception", e)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+    
+    fun clearError() {
+        _error.value = null
+    }
+    
+    // Online status
+    val isOnline: Boolean
+        get() = repository.isOnline()
 } 

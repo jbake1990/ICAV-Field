@@ -22,6 +22,7 @@ struct ContentView: View {
     @State private var showingEditSheet = false
     @State private var editJob: TimeEntry? = nil
     @State private var showingLogoutAlert = false
+    @State private var showingSettings = false
     
     // Job Notes Modal states
     @State private var showingJobNotesModal = false
@@ -115,7 +116,54 @@ struct ContentView: View {
                         }
                     }
             } else {
-                LoginView(authManager: authManager)
+                // Show settings instead of login form
+                VStack(spacing: 30) {
+                    // App Logo/Title
+                    VStack(spacing: 16) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 80))
+                            .foregroundColor(.blue)
+                        
+                        Text("ICAV Time Tracker")
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
+                        
+                        Text("Field Technician App")
+                            .font(.title2)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.top, 60)
+                    
+                    VStack(spacing: 20) {
+                        Text("Please configure your account credentials to get started.")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
+                        
+                        Button(action: {
+                            showingSettings = true
+                        }) {
+                            HStack {
+                                Image(systemName: "gear")
+                                Text("Open Settings")
+                            }
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .cornerRadius(12)
+                        }
+                        .padding(.horizontal, 30)
+                    }
+                    
+                    Spacer()
+                }
+                .sheet(isPresented: $showingSettings) {
+                    SettingsView(authManager: authManager)
+                }
             }
         }
     }
@@ -311,6 +359,9 @@ struct ContentView: View {
                     },
                     shareManager: shareManager
                 )
+            }
+            .sheet(isPresented: $showingSettings) {
+                SettingsView(authManager: authManager)
             }
             .padding(.horizontal)
             .padding(.bottom, 8)
@@ -571,6 +622,10 @@ struct ContentView: View {
             }
             
             Divider()
+            
+            Button("Settings") {
+                showingSettings = true
+            }
             
             Button("Logout") {
                 authManager.logout()

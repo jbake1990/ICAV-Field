@@ -45,6 +45,7 @@ enum class ButtonState { UNAVAILABLE, AVAILABLE, ACTIVE }
 @Composable
 fun MainScreen(
     onLogout: () -> Unit,
+    onSettings: () -> Unit,
     viewModel: TimeTrackerViewModel
 ) {
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
@@ -156,6 +157,15 @@ fun MainScreen(
                         )
                         Divider()
                     }
+                    DropdownMenuItem(
+                        text = { 
+                            Text("Settings")
+                        },
+                        onClick = {
+                            showUserMenu = false
+                            onSettings()
+                        }
+                    )
                     DropdownMenuItem(
                         text = { 
                             Text(
