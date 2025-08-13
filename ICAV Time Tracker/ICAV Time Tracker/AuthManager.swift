@@ -340,4 +340,25 @@ class AuthManager: ObservableObject {
         userDefaults.removeObject(forKey: savedUsernameKey)
         userDefaults.removeObject(forKey: savedPasswordKey)
     }
+    
+    // Test connection with credentials
+    func testConnection(username: String, password: String) async -> Bool {
+        do {
+            let authResponse = try await apiService.login(username: username, password: password)
+            let user = apiService.convertToUser(authResponse.user)
+            
+            await MainActor.run {
+                self.currentUser = user
+                self.isAuthenticated = true
+                self.authToken = authResponse.token
+                self.tokenExpiresAt = parseExpiresAt(authResponse.expiresAt)
+                self.lastTokenVerification = Date()
+                self.saveUser()
+            }
+            
+            return true
+        } catch {
+            return false
+        }
+    }
 } 

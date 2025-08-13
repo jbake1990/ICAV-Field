@@ -183,31 +183,18 @@ struct SettingsView: View {
         isTestingConnection = true
         
         Task {
-            do {
-                let authResponse = try await authManager.apiService.login(username: username, password: password)
-                let user = authManager.apiService.convertToUser(authResponse.user)
-                
-                await MainActor.run {
-                    authManager.currentUser = user
-                    authManager.isAuthenticated = true
-                    authManager.authToken = authResponse.token
-                    authManager.tokenExpiresAt = authManager.parseExpiresAt(authResponse.expiresAt)
-                    authManager.lastTokenVerification = Date()
-                    authManager.saveUser()
-                    
+            let success = await authManager.testConnection(username: username, password: password)
+            
+            await MainActor.run {
+                if success {
                     alertTitle = "Success"
                     alertMessage = "Credentials saved and authentication successful!"
-                    showingAlert = true
-                    isTestingConnection = false
-                }
-                
-            } catch {
-                await MainActor.run {
+                } else {
                     alertTitle = "Authentication Failed"
                     alertMessage = "Invalid credentials or network error. Please check your username and password."
-                    showingAlert = true
-                    isTestingConnection = false
                 }
+                showingAlert = true
+                isTestingConnection = false
             }
         }
     }
