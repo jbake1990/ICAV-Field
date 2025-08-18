@@ -1001,6 +1001,7 @@ function AppContent() {
           {currentView === 'reports' && (
             <Reports
               timeEntries={timeEntries}
+              users={users}
               onClose={() => setCurrentView('dashboard')}
             />
           )}

@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Calendar, Download, FileText, Users, Building, X, Search, Clock, User, MapPin } from 'lucide-react';
-import { TimeEntry, ReportType, ReportFilters, ReportData, TechnicianReport, CustomerReport } from '../types';
+import { Calendar, Download, FileText, Users, Building, X, Search, Clock, User as UserIcon, MapPin } from 'lucide-react';
+import { TimeEntry, ReportType, ReportFilters, ReportData, TechnicianReport, CustomerReport, User } from '../types';
 import { formatDate, formatTime } from '../utils/timeUtils';
 
 interface ReportsProps {
   timeEntries: TimeEntry[];
+  users: User[];
   onClose: () => void;
 }
 
@@ -37,7 +38,7 @@ interface LunchSearchData {
   averageLunchDuration: number;
 }
 
-export default function Reports({ timeEntries, onClose }: ReportsProps) {
+export default function Reports({ timeEntries, users, onClose }: ReportsProps) {
   const [searchMode, setSearchMode] = useState<SearchMode>('tech');
   const [selectedTechnician, setSelectedTechnician] = useState<string>('');
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
@@ -66,29 +67,30 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
 
   // Get unique technicians and customers for dropdowns
   const technicians = useMemo(() => {
-    const techs = new Set(timeEntries.map(entry => entry.technicianName));
-    return Array.from(techs).sort();
-  }, [timeEntries]);
+    // Get all technicians from users (active tech users)
+    const techUsers = users.filter(user => user.role === 'tech' && user.isActive);
+    const techNames = techUsers.map(user => user.displayName);
+    
+    // Also include any technicians from time entries that might not be in users
+    const entryTechs = new Set(timeEntries.map(entry => entry.technicianName));
+    
+    // Combine both sets and sort
+    const allTechs = new Set([...techNames, ...Array.from(entryTechs)]);
+    return Array.from(allTechs).sort();
+  }, [users, timeEntries]);
 
   const customers = useMemo(() => {
     const custs = new Set(timeEntries.map(entry => entry.customerName));
     return Array.from(custs).sort();
   }, [timeEntries]);
 
-  // Filter entries based on current filters
+  // Use all time entries for searching - date filtering happens in specific search modes
   const filteredEntries = useMemo(() => {
     return timeEntries.filter(entry => {
       const entryDate = entry.clockInTime || entry.driveStartTime;
-      if (!entryDate) return false;
-
-      // Date range filter
-      if (entryDate < filters.dateRange.start || entryDate > filters.dateRange.end) {
-        return false;
-      }
-
-      return true;
+      return entryDate !== undefined; // Only filter out entries without dates
     });
-  }, [timeEntries, filters]);
+  }, [timeEntries]);
 
   // Tech Search Data
   const techSearchData = useMemo((): TechSearchData[] => {
@@ -147,9 +149,17 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
       entry.customerName.toLowerCase().includes(selectedCustomer.toLowerCase())
     );
 
+    // Filter by selected date for customer search
+    const dateFilteredEntries = searchMode === 'customer' 
+      ? customerEntries.filter(entry => {
+          const entryDate = entry.clockInTime || entry.driveStartTime;
+          return entryDate && entryDate.toDateString() === selectedDate.toDateString();
+        })
+      : customerEntries;
+
     const customerMap = new Map<string, CustomerSearchData>();
     
-    customerEntries.forEach(entry => {
+    dateFilteredEntries.forEach(entry => {
       const key = `${entry.customerName}-${entry.jobId || 'no-job'}`;
       
       if (!customerMap.has(key)) {
@@ -176,7 +186,7 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
     });
 
     return Array.from(customerMap.values());
-  }, [filteredEntries, selectedCustomer]);
+  }, [filteredEntries, selectedCustomer, selectedDate, searchMode]);
 
   // Lunch Search Data
   const lunchSearchData = useMemo((): LunchSearchData[] => {
@@ -227,16 +237,23 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
 
   // Get entries for selected date (for mini calendar)
   const selectedDateEntries = useMemo(() => {
-    if (!selectedTechnician) return [];
+    if (searchMode === 'tech' && !selectedTechnician) return [];
+    if (searchMode === 'customer' && !selectedCustomer) return [];
     
     return filteredEntries.filter(entry => {
       const entryDate = entry.clockInTime || entry.driveStartTime;
       if (!entryDate) return false;
       
-      return entry.technicianName.toLowerCase().includes(selectedTechnician.toLowerCase()) &&
-             entryDate.toDateString() === selectedDate.toDateString();
+      if (searchMode === 'tech') {
+        return entry.technicianName.toLowerCase().includes(selectedTechnician.toLowerCase()) &&
+               entryDate.toDateString() === selectedDate.toDateString();
+      } else if (searchMode === 'customer') {
+        return entry.customerName.toLowerCase().includes(selectedCustomer.toLowerCase()) &&
+               entryDate.toDateString() === selectedDate.toDateString();
+      }
+      return false;
     });
-  }, [filteredEntries, selectedTechnician, selectedDate]);
+  }, [filteredEntries, selectedTechnician, selectedCustomer, selectedDate, searchMode]);
 
   // Mini Calendar Component
   const MiniCalendar = ({ onDateSelect }: { onDateSelect: (date: Date) => void }) => {
@@ -263,8 +280,18 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
     const hasEntriesForDate = (date: Date) => {
       return filteredEntries.some(entry => {
         const entryDate = entry.clockInTime || entry.driveStartTime;
-        return entryDate && date && entryDate.toDateString() === date.toDateString() &&
-               entry.technicianName.toLowerCase().includes(selectedTechnician.toLowerCase());
+        if (!entryDate || !date || entryDate.toDateString() !== date.toDateString()) {
+          return false;
+        }
+        
+        if (searchMode === 'tech') {
+          return entry.technicianName.toLowerCase().includes(selectedTechnician.toLowerCase());
+        } else if (searchMode === 'customer') {
+          return entry.customerName.toLowerCase().includes(selectedCustomer.toLowerCase());
+        } else if (searchMode === 'lunch') {
+          return entry.technicianName.toLowerCase().includes(selectedTechnician.toLowerCase());
+        }
+        return false;
       });
     };
 
@@ -436,10 +463,10 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
                     }`}
                   >
                     <div className="flex items-center space-x-3">
-                      <User className="w-5 h-5" />
+                      <UserIcon className="w-5 h-5" />
                       <div>
                         <div className="font-medium">Technician Search</div>
-                        <div className="text-sm text-gray-500">Search by tech with mini calendar</div>
+                        <div className="text-sm text-gray-500">Search by tech with mini calendar (all technicians)</div>
                       </div>
                     </div>
                   </button>
@@ -487,32 +514,6 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
                     <>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Date Range
-                        </label>
-                        <div className="space-y-2">
-                          <input
-                            type="date"
-                            value={filters.dateRange.start.toISOString().split('T')[0]}
-                            onChange={(e) => setFilters(prev => ({
-                              ...prev,
-                              dateRange: { ...prev.dateRange, start: new Date(e.target.value) }
-                            }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                          <input
-                            type="date"
-                            value={filters.dateRange.end.toISOString().split('T')[0]}
-                            onChange={(e) => setFilters(prev => ({
-                              ...prev,
-                              dateRange: { ...prev.dateRange, end: new Date(e.target.value) }
-                            }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
                           Customer
                         </label>
                         <select
@@ -526,6 +527,15 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
                           ))}
                         </select>
                       </div>
+
+                      {selectedCustomer && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Select Date
+                          </label>
+                          <MiniCalendar onDateSelect={setSelectedDate} />
+                        </div>
+                      )}
                     </>
                   )}
 
@@ -719,7 +729,7 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
               {searchMode === 'customer' && selectedCustomer && (
                 <div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                    Customer: {selectedCustomer}
+                    Customer: {selectedCustomer} - {formatDate(selectedDate)}
                   </h3>
                   
                   <div className="space-y-4">
@@ -804,6 +814,51 @@ export default function Reports({ timeEntries, onClose }: ReportsProps) {
                         </div>
                       </div>
                     ))}
+                  </div>
+
+                  {/* Selected Date Entries for Customer Search */}
+                  <div className="bg-white border rounded-lg overflow-hidden mt-6">
+                    <div className="px-4 py-3 border-b bg-gray-50">
+                      <h4 className="font-medium text-gray-900">Entries for {formatDate(selectedDate)}</h4>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Technician</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job ID</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Clock In</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Clock Out</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Drive</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lunch</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {selectedDateEntries.map((entry) => (
+                            <tr key={entry.id} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 text-sm text-gray-900">{entry.technicianName}</td>
+                              <td className="px-4 py-3 text-sm text-gray-900">{entry.jobId || 'N/A'}</td>
+                              <td className="px-4 py-3 text-sm text-gray-900">
+                                {entry.clockInTime ? formatTime(entry.clockInTime) : 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-900">
+                                {entry.clockOutTime ? formatTime(entry.clockOutTime) : 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-900">
+                                {entry.formattedDuration || 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-900">
+                                {entry.formattedDriveDuration || 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-900">
+                                {entry.formattedLunchDuration || 'N/A'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               )}
