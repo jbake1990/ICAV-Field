@@ -390,4 +390,16 @@ class TimeTrackerRepository {
             }
         }
     }
-} 
+    
+    fun isOnline(): Boolean {
+        return try {
+            // Simple network connectivity check
+            val runtime = Runtime.getRuntime()
+            val process = runtime.exec("/system/bin/ping -c 1 8.8.8.8")
+            val exitCode = process.waitFor()
+            exitCode == 0
+        } catch (e: Exception) {
+            false
+        }
+    }
+}

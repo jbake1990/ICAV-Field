@@ -12,7 +12,6 @@ struct ContentView: View {
     @StateObject private var authManager = AuthManager()
     @StateObject private var viewModel: TimeTrackerViewModel
     @StateObject private var pdfGenerator = PDFGenerator()
-    @StateObject private var shareManager = ShareManager()
     @StateObject private var openAIService: OpenAIService
     @State private var showingExportSheet = false
     // Add these:
@@ -782,7 +781,7 @@ struct ContentView: View {
             if success {
                 print("✅ Successfully synced to server")
                 
-                // Generate PDF
+                // Generate PDF and save locally (no sharing)
                 let report = pdfGenerator.createJobReport(
                     from: updatedEntry,
                     aiSummary: summary
@@ -791,58 +790,28 @@ struct ContentView: View {
                 if let pdfData = pdfGenerator.generateJobSummaryPDF(for: report) {
                     let fileName = pdfGenerator.generateFileName(for: report)
                     
-                    // Save locally
+                    // Save locally only
                     if let savedURL = pdfGenerator.saveToDocuments(pdfData: pdfData, fileName: fileName) {
                         print("📄 PDF saved to: \(savedURL)")
-                        
-                        // Offer sharing
-                        await MainActor.run {
-                            shareManager.sharePDF(pdfData: pdfData, fileName: fileName)
-                        }
-                        
-                        // Wait for share to complete before proceeding
-                        await MainActor.run {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                                                        // Complete the clock out in the view model
-                        viewModel.clockOut()
-                        
-                        // Force UI refresh by triggering a state update
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            // Close the modal after clock out
-                            showingJobNotesModal = false
-                            jobNotesEntry = nil
-                            jobNotesText = ""
-                            aiSummary = ""
-                            
-                            // Force UI refresh by updating a state variable
-                            viewModel.objectWillChange.send()
-                        }
-                            }
-                        }
                     }
                 }
             } else {
                 print("❌ Failed to sync to server")
                 // TODO: Handle sync failure - maybe store locally for later sync
+            }
+            
+            // Complete the clock out in the view model and refresh UI
+            await MainActor.run {
+                viewModel.clockOut()
                 
-                // Still clock out even if sync fails, but with delay
-                await MainActor.run {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                        viewModel.clockOut()
-                        
-                        // Force UI refresh by triggering a state update
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            // Close the modal after clock out
-                            showingJobNotesModal = false
-                            jobNotesEntry = nil
-                            jobNotesText = ""
-                            aiSummary = ""
-                            
-                            // Force UI refresh by updating a state variable
-                            viewModel.objectWillChange.send()
-                        }
-                    }
-                }
+                // Close the modal and reset state
+                showingJobNotesModal = false
+                jobNotesEntry = nil
+                jobNotesText = ""
+                aiSummary = ""
+                
+                // Force UI refresh
+                viewModel.objectWillChange.send()
             }
         }
         
@@ -1055,17 +1024,6 @@ struct JobNotesModal: View {
                 }
             } message: {
                 Text(openAIService.errorMessage)
-            }
-            .shareSheet(
-                isPresented: $shareManager.isSharePresented,
-                items: shareManager.shareItems
-            ) { activityType, completed in
-                if completed {
-                    print("📤 Share completed with: \(activityType?.rawValue ?? "unknown")")
-                } else {
-                    print("📤 Share cancelled")
-                }
-                shareManager.cleanup()
             }
         }
     }

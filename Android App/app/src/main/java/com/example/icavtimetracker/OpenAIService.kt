@@ -43,6 +43,12 @@ class OpenAIService {
     }
     
     @Serializable
+    data class ServerAIRequest(
+        val notes: String,
+        val customerName: String
+    )
+    
+    @Serializable
     data class ServerAIResponse(
         val summary: String
     )
@@ -77,12 +83,9 @@ class OpenAIService {
     }
     
     private suspend fun performServerSummarization(notes: String, customerName: String): Result<JobSummary> {
-        val requestBody = mapOf(
-            "notes" to notes,
-            "customerName" to customerName
-        )
+        val requestBody = ServerAIRequest(notes = notes, customerName = customerName)
         
-        val requestJson = json.encodeToString(requestBody)
+        val requestJson = json.encodeToString(ServerAIRequest.serializer(), requestBody)
         val body = requestJson.toRequestBody("application/json".toMediaType())
         
         val httpRequest = Request.Builder()

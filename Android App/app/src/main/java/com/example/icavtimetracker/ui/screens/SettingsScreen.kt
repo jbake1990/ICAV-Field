@@ -2,13 +2,19 @@ package com.example.icavtimetracker.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import com.example.icavtimetracker.ui.theme.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -27,15 +33,17 @@ fun SettingsScreen(
     
     val isAuthenticated by viewModel.isAuthenticated.collectAsStateWithLifecycle()
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
-    val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
+    
+    // Get online status as a computed value
+    val isOnline = viewModel.isOnline
     
     // Load saved credentials on first appearance
     LaunchedEffect(Unit) {
         val savedCredentials = viewModel.getSavedCredentials()
         if (savedCredentials != null) {
-            username = savedCredentials.username
-            password = savedCredentials.password
+            username = savedCredentials.first
+            password = savedCredentials.second
         }
     }
     
@@ -53,11 +61,11 @@ fun SettingsScreen(
             Text(
                 text = "Settings",
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                fontWeight = FontWeight.Bold
             )
             
             IconButton(onClick = onBackPressed) {
-                androidx.compose.material.icons.Icons.Default.Close
+                Icons.Default.Close
             }
         }
         
@@ -75,7 +83,7 @@ fun SettingsScreen(
                 Text(
                     text = "Account Credentials",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    fontWeight = FontWeight.Bold
                 )
                 
                 // Username field
@@ -98,7 +106,7 @@ fun SettingsScreen(
                     label = { Text("Password") },
                     modifier = Modifier.fillMaxWidth(),
                     visualTransformation = if (isPasswordVisible) {
-                        androidx.compose.ui.text.input.VisualTransformation.None
+                        VisualTransformation.None
                     } else {
                         PasswordVisualTransformation()
                     },
@@ -109,7 +117,10 @@ fun SettingsScreen(
                     singleLine = true,
                     trailingIcon = {
                         IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                            androidx.compose.material.icons.Icons.Default.Visibility
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = if (isPasswordVisible) "Hide password" else "Show password"
+                            )
                         }
                     }
                 )
@@ -153,7 +164,7 @@ fun SettingsScreen(
                 Text(
                     text = "Authentication Status",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    fontWeight = FontWeight.Bold
                 )
                 
                 // Authentication status
@@ -161,7 +172,7 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    androidx.compose.material.icons.Icons.Default.CheckCircle
+                    Icons.Default.CheckCircle
                     Text(
                         text = if (isAuthenticated) "Authenticated" else "Not Authenticated",
                         style = MaterialTheme.typography.bodyLarge
@@ -182,7 +193,7 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    androidx.compose.material.icons.Icons.Default.Wifi
+                    Icons.Default.CheckCircle
                     Text(
                         text = if (isOnline) "Online" else "Offline",
                         style = MaterialTheme.typography.bodyLarge
@@ -211,7 +222,7 @@ fun SettingsScreen(
                 Text(
                     text = "Actions",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    fontWeight = FontWeight.Bold
                 )
                 
                 Button(
@@ -255,7 +266,7 @@ fun SettingsScreen(
                 Text(
                     text = "Information",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    fontWeight = FontWeight.Bold
                 )
                 
                 Text(

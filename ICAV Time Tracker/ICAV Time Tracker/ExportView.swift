@@ -24,16 +24,14 @@ struct ExportView: View {
                 .cornerRadius(12)
                 .padding()
                 
-                Button("Share Data") {
-                    shareData()
-                }
-                .font(.headline)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.blue)
-                .cornerRadius(12)
-                .padding()
+                Text("Data exported successfully")
+                    .font(.headline)
+                    .foregroundColor(.green)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.green.opacity(0.1))
+                    .cornerRadius(12)
+                    .padding()
             }
             .navigationTitle("Export Data")
             .navigationBarTitleDisplayMode(.inline)
@@ -47,15 +45,4 @@ struct ExportView: View {
         }
     }
     
-    private func shareData() {
-        let activityVC = UIActivityViewController(
-            activityItems: [csvData],
-            applicationActivities: nil
-        )
-        
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
-            window.rootViewController?.present(activityVC, animated: true)
-        }
-    }
 } 

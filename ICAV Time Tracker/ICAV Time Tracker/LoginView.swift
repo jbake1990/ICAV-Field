@@ -114,6 +114,13 @@ struct LoginView: View {
             } message: {
                 Text(authManager.alertMessage)
             }
+            .onAppear {
+                // Load saved credentials if they exist
+                if let savedCredentials = authManager.getSavedCredentials() {
+                    username = savedCredentials.username
+                    password = savedCredentials.password
+                }
+            }
         }
     }
-} 
+}

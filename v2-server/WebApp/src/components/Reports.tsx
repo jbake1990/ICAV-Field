@@ -348,6 +348,36 @@ export default function Reports({ timeEntries, users, onClose }: ReportsProps) {
   };
 
   // Export functions
+  const exportToPDF = () => {
+    try {
+      const { exportTimeEntriesToPDF } = require('../utils/pdfExport');
+      let dataToExport: any[] = [];
+      let title = '';
+
+      switch (searchMode) {
+        case 'tech':
+          dataToExport = selectedDateEntries;
+          title = `Technician Report - ${selectedDate ? formatDate(selectedDate) : 'All Dates'}`;
+          break;
+        case 'customer':
+          dataToExport = customerSearchData.flatMap(customer => customer.entries);
+          title = `Customer Report - ${selectedCustomer || 'All Customers'}`;
+          break;
+        case 'lunch':
+          dataToExport = lunchSearchData.flatMap(lunch => lunch.entries);
+          title = `Lunch Report - ${selectedDate ? formatDate(selectedDate) : 'All Dates'}`;
+          break;
+        default:
+          return;
+      }
+
+      exportTimeEntriesToPDF(dataToExport, title);
+    } catch (error) {
+      console.error('Failed to export to PDF:', error);
+      alert('Failed to export to PDF. Please try again.');
+    }
+  };
+
   const exportToCSV = () => {
     let headers: string[];
     let data: any[];
@@ -431,6 +461,13 @@ export default function Reports({ timeEntries, users, onClose }: ReportsProps) {
             <h2 className="text-2xl font-bold text-gray-900">Advanced Reports</h2>
           </div>
           <div className="flex items-center space-x-2">
+            <button
+              onClick={exportToPDF}
+              className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              <span>Export PDF</span>
+            </button>
             <button
               onClick={exportToCSV}
               className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"

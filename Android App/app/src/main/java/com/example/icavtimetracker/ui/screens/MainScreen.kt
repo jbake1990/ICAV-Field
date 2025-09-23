@@ -7,7 +7,18 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
@@ -19,16 +30,17 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.icavtimetracker.data.JobAssignment
 import com.example.icavtimetracker.OpenAIService
 import com.example.icavtimetracker.PDFGenerator
-import com.example.icavtimetracker.ShareManager
 import com.example.icavtimetracker.SpeechRecognitionManager
 import com.example.icavtimetracker.data.ClockStatus
 import com.example.icavtimetracker.data.TimeEntry
+import com.example.icavtimetracker.ui.theme.*
 import com.example.icavtimetracker.viewmodel.TimeTrackerViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -62,7 +74,6 @@ fun MainScreen(
     val speechManager = remember { SpeechRecognitionManager(context) }
     val openAIService = remember { OpenAIService() }
     val pdfGenerator = remember { PDFGenerator(context) }
-    val shareManager = remember { ShareManager(context) }
     
     // Collect service states
     val speechRecognizedText by speechManager.recognizedText.collectAsStateWithLifecycle()
@@ -261,8 +272,8 @@ fun MainScreen(
                     title = "Clock In",
                     icon = Icons.Default.PlayArrow,
                     state = buttonStates["Clock In"] ?: ButtonState.UNAVAILABLE,
-                    brightColor = Color.Blue,
-                    darkColor = Color(0xFF1A1F36),
+                    brightColor = ButtonGreen,
+                    darkColor = ButtonGreen,
                     modifier = Modifier.weight(1f)
                 ) {
                     handleAction("Clock In", selectedJob, viewModel) {
@@ -275,8 +286,8 @@ fun MainScreen(
                     title = "Clock Out",
                     icon = Icons.Default.Clear,
                     state = buttonStates["Clock Out"] ?: ButtonState.UNAVAILABLE,
-                    brightColor = Color.Red,
-                    darkColor = Color(0xFF211515),
+                    brightColor = ButtonRed,
+                    darkColor = ButtonRed,
                     modifier = Modifier.weight(1f)
                 ) {
                     handleAction("Clock Out", selectedJob, viewModel) {
@@ -294,8 +305,8 @@ fun MainScreen(
                     title = "Start Lunch",
                     icon = Icons.Default.Add,
                     state = buttonStates["Start Lunch"] ?: ButtonState.UNAVAILABLE,
-                    brightColor = Color(0xFFFF8C00), // Orange
-                    darkColor = Color(0xFF381A08),
+                    brightColor = ButtonOrange,
+                    darkColor = ButtonOrange,
                     modifier = Modifier.weight(1f)
                 ) {
                     handleAction("Start Lunch", selectedJob, viewModel) {
@@ -308,8 +319,8 @@ fun MainScreen(
                     title = "End Lunch",
                     icon = Icons.Default.PlayArrow,
                     state = buttonStates["End Lunch"] ?: ButtonState.UNAVAILABLE,
-                    brightColor = Color(0xFFFF8C00), // Orange
-                    darkColor = Color(0xFF211515),
+                    brightColor = ButtonOrange,
+                    darkColor = ButtonOrange,
                     modifier = Modifier.weight(1f)
                 ) {
                     handleAction("End Lunch", selectedJob, viewModel) {
@@ -327,8 +338,8 @@ fun MainScreen(
                     title = "Start Driving",
                     icon = Icons.Default.LocationOn,
                     state = buttonStates["Start Driving"] ?: ButtonState.UNAVAILABLE,
-                    brightColor = Color.Green,
-                    darkColor = Color(0xFF083822),
+                    brightColor = ButtonBlue,
+                    darkColor = ButtonBlue,
                     modifier = Modifier.weight(1f)
                 ) {
                     handleAction("Start Driving", selectedJob, viewModel) {
@@ -341,8 +352,8 @@ fun MainScreen(
                     title = "End Driving",
                     icon = Icons.Default.LocationOn,
                     state = buttonStates["End Driving"] ?: ButtonState.UNAVAILABLE,
-                    brightColor = Color.Green,
-                    darkColor = Color(0xFF211515),
+                    brightColor = ButtonBlue,
+                    darkColor = ButtonBlue,
                     modifier = Modifier.weight(1f)
                 ) {
                     handleAction("End Driving", selectedJob, viewModel) {
@@ -360,8 +371,8 @@ fun MainScreen(
             onClick = { /* TODO: Implement edit timestamps */ },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF9C27B0).copy(alpha = 0.2f),
-                contentColor = Color(0xFF9C27B0)
+                containerColor = ButtonGray,
+                contentColor = Color.White
             ),
             shape = RoundedCornerShape(16.dp)
         ) {
@@ -559,7 +570,7 @@ fun MainScreen(
                                 clockOutTime = Date()
                             )
                             
-                            // Generate and share PDF
+                            // Generate and save PDF locally (no sharing)
                             try {
                                 val report = PDFGenerator.JobReport(
                                     timeEntry = updatedEntry,
@@ -571,21 +582,22 @@ fun MainScreen(
                                 )
                                 val pdfBytes = pdfGenerator.generateJobSummaryPDF(report)
                                 if (pdfBytes != null) {
-                                    shareManager.sharePDFFromByteArray(pdfBytes, "Job Notes - ${entry.customerName}")
+                                    // Save PDF locally only
+                                    pdfGenerator.saveJobSummaryPDF(updatedEntry, pdfBytes)
                                 }
-                                
-                                // Wait for share to complete before proceeding
-                                delay(3000) // 3 second delay
                                 
                             } catch (e: Exception) {
                                 // Handle PDF generation error
                             }
                             
+                            // Update the view model and clock out
+                            viewModel.clockOut()
+                            
                         } catch (e: Exception) {
                             // Handle error
                         }
                         
-                        // Close the modal after delay
+                        // Close the modal immediately
                         showJobNotesDialog = false
                         jobNotesEntry = null
                         jobNotesText = ""
@@ -623,7 +635,7 @@ fun ActionButton(
 ) {
     val (backgroundColor, contentColor) = when (state) {
         ButtonState.UNAVAILABLE -> MaterialTheme.colorScheme.surfaceVariant to MaterialTheme.colorScheme.onSurfaceVariant
-        ButtonState.AVAILABLE -> darkColor to brightColor
+        ButtonState.AVAILABLE -> brightColor to Color.White
         ButtonState.ACTIVE -> brightColor to Color.White
     }
     
@@ -698,14 +710,15 @@ fun JobListItem(
 }
 
 fun getButtonStates(selectedJob: TimeEntry?, clockStatus: ClockStatus): Map<String, ButtonState> {
+    // Temporary: Make all buttons available for testing
     if (selectedJob == null) {
         return mapOf(
-            "Clock In" to ButtonState.UNAVAILABLE,
-            "Clock Out" to ButtonState.UNAVAILABLE,
-            "Start Lunch" to ButtonState.UNAVAILABLE,
-            "End Lunch" to ButtonState.UNAVAILABLE,
-            "Start Driving" to ButtonState.UNAVAILABLE,
-            "End Driving" to ButtonState.UNAVAILABLE
+            "Clock In" to ButtonState.AVAILABLE,
+            "Clock Out" to ButtonState.AVAILABLE,
+            "Start Lunch" to ButtonState.AVAILABLE,
+            "End Lunch" to ButtonState.AVAILABLE,
+            "Start Driving" to ButtonState.AVAILABLE,
+            "End Driving" to ButtonState.AVAILABLE
         )
     }
     
@@ -771,29 +784,41 @@ fun handleAction(
     viewModel: TimeTrackerViewModel,
     onShowJobNotes: (TimeEntry) -> Unit
 ) {
+    android.util.Log.d("MainScreen", "Button clicked: $action")
     when (action) {
         "Clock In" -> {
+            android.util.Log.d("MainScreen", "Clock In action triggered")
             selectedJob?.let { job ->
                 viewModel.clockIn(job.customerName)
+            } ?: run {
+                // If no job selected, create a new one with a default name
+                viewModel.clockIn("Test Customer")
             }
         }
         "Clock Out" -> {
+            android.util.Log.d("MainScreen", "Clock Out action triggered")
             selectedJob?.let { job ->
                 onShowJobNotes(job)
             }
         }
         "Start Lunch" -> {
+            android.util.Log.d("MainScreen", "Start Lunch action triggered")
             viewModel.startLunch()
         }
         "End Lunch" -> {
+            android.util.Log.d("MainScreen", "End Lunch action triggered")
             viewModel.endLunch()
         }
         "Start Driving" -> {
+            android.util.Log.d("MainScreen", "Start Driving action triggered")
             selectedJob?.let { job ->
                 viewModel.startDriving(job.customerName)
+            } ?: run {
+                viewModel.startDriving("Test Customer")
             }
         }
         "End Driving" -> {
+            android.util.Log.d("MainScreen", "End Driving action triggered")
             viewModel.endDriving()
         }
     }
@@ -824,10 +849,14 @@ fun JobNotesDialog(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .fillMaxHeight(0.9f)
+                .padding(8.dp),
+            shape = RoundedCornerShape(16.dp)
         ) {
             Column(
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp)
             ) {
                 Text(
                     text = "Job Notes",
@@ -852,16 +881,18 @@ fun JobNotesDialog(
                     label = { Text("Job Notes") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(120.dp),
-                    maxLines = 5
+                        .weight(1f)
+                        .heightIn(min = 200.dp),
+                    maxLines = 10,
+                    textStyle = MaterialTheme.typography.bodyLarge
                 )
                 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 
                 // Voice input and AI buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Button(
                         onClick = {
@@ -870,14 +901,21 @@ fun JobNotesDialog(
                             } else {
                                 speechManager.startRecording()
                             }
-                        }
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (speechIsRecording) ButtonRed else ButtonBlue,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
                         Icon(
                             if (speechIsRecording) Icons.Default.Clear else Icons.Default.Add,
-                            contentDescription = if (speechIsRecording) "Stop Recording" else "Start Recording"
+                            contentDescription = if (speechIsRecording) "Stop Recording" else "Start Recording",
+                            modifier = Modifier.size(24.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(if (speechIsRecording) "Stop" else "Voice Input")
                     }
                     
                     Button(
@@ -901,18 +939,29 @@ fun JobNotesDialog(
                                 }
                             }
                         },
-                        enabled = !openAIIsLoading && jobNotesText.isNotBlank()
+                        enabled = !openAIIsLoading && jobNotesText.isNotBlank(),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ButtonOrange,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
                         if (openAIIsLoading) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.White
                             )
                         } else {
-                            Icon(Icons.Default.Star, contentDescription = null)
+                            Icon(
+                                Icons.Default.Star, 
+                                contentDescription = "Summarize",
+                                modifier = Modifier.size(24.dp)
+                            )
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("AI Summary")
                     }
                 }
                 
@@ -949,13 +998,14 @@ fun JobNotesDialog(
                 if (aiSummary.isNotBlank()) {
                     Text(
                         text = "AI Summary:",
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .weight(1f)
                             .padding(vertical = 8.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -963,8 +1013,8 @@ fun JobNotesDialog(
                     ) {
                         Text(
                             text = aiSummary,
-                            modifier = Modifier.padding(12.dp),
-                            style = MaterialTheme.typography.bodyMedium
+                            modifier = Modifier.padding(16.dp),
+                            style = MaterialTheme.typography.bodyLarge
                         )
                     }
                 }
@@ -974,16 +1024,44 @@ fun JobNotesDialog(
                 // Action buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    TextButton(onClick = onCancel) {
-                        Text("Cancel")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
                     Button(
-                        onClick = { onSave(jobNotesText, aiSummary) }
+                        onClick = onCancel,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ButtonGray,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text("Save & Clock Out")
+                        Text(
+                            "Cancel",
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    
+                    Button(
+                        onClick = { onSave(jobNotesText, aiSummary) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ButtonGreen,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            "Save & Clock Out",
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }

@@ -1441,10 +1441,6 @@ class TimeTrackerViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
     
-    fun clearError() {
-        _error.value = null
-    }
-    
     // Online status
     val isOnline: Boolean
         get() = repository.isOnline()

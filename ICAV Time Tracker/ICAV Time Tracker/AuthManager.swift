@@ -104,6 +104,8 @@ class AuthManager: ObservableObject {
                     self.tokenExpiresAt = parseExpiresAt(authResponse.expiresAt)
                     self.lastTokenVerification = Date()
                     self.saveUser()
+                    // Save credentials for future auto-login
+                    self.saveCredentials(username: cleanUsername, password: cleanPassword)
                     self.isLoading = false
                 }
                 
@@ -139,6 +141,8 @@ class AuthManager: ObservableObject {
             currentUser = user
             isAuthenticated = true
             saveUser()
+            // Save credentials for future auto-login
+            saveCredentials(username: username, password: password)
             isLoading = false
             showAlert("Logged in offline mode. Data will sync when connected.")
             return
@@ -154,11 +158,13 @@ class AuthManager: ObservableObject {
         currentUser = user
         isAuthenticated = true
         saveUser()
+        // Save credentials for future auto-login
+        saveCredentials(username: username, password: password)
         isLoading = false
         showAlert("Logged in offline mode. Data will sync when connected.")
     }
     
-    func logout() {
+    func logout(clearCredentials: Bool = false) {
         if let token = authToken {
             Task {
                 do {
@@ -175,6 +181,11 @@ class AuthManager: ObservableObject {
         tokenExpiresAt = nil
         lastTokenVerification = nil
         userDefaults.removeObject(forKey: userKey)
+        
+        // Optionally clear saved credentials
+        if clearCredentials {
+            clearSavedCredentials()
+        }
     }
     
     private func verifySession(token: String) async {

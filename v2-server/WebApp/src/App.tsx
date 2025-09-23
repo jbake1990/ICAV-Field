@@ -11,6 +11,7 @@ import JobCalendar from './components/JobCalendar';
 import JobNotesModal from './components/JobNotesModal';
 import { WorkOrders } from './components/WorkOrders';
 import { WorkOrderModal } from './components/WorkOrderModal';
+import { WorkOrderEditModal } from './components/WorkOrderEditModal';
 import Dashboard from './components/Dashboard';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { formatDate, formatTime } from './utils/timeUtils';
@@ -38,6 +39,8 @@ function AppContent() {
   const [showClearDatabaseConfirm, setShowClearDatabaseConfirm] = useState(false);
   const [deletingEntry, setDeletingEntry] = useState<string | null>(null);
   const [selectedWorkOrder, setSelectedWorkOrder] = useState<WorkOrder | null>(null);
+  const [showWorkOrderEditModal, setShowWorkOrderEditModal] = useState(false);
+  const [savingWorkOrder, setSavingWorkOrder] = useState(false);
 
   // Clear data when user logs out
   useEffect(() => {
@@ -789,13 +792,57 @@ function AppContent() {
   };
 
   const handleEditWorkOrder = (workOrder: WorkOrder) => {
-    // TODO: Implement work order editing
-    alert('Work order editing will be implemented soon');
+    setSelectedWorkOrder(workOrder);
+    setShowWorkOrderEditModal(true);
   };
 
   const handleExportWorkOrder = (workOrder: WorkOrder) => {
-    // TODO: Implement PDF export
-    alert('PDF export will be implemented soon');
+    try {
+      const { exportWorkOrderToPDF } = require('./utils/pdfExport');
+      exportWorkOrderToPDF(workOrder);
+    } catch (error) {
+      console.error('Failed to export work order:', error);
+      alert('Failed to export work order. Please try again.');
+    }
+  };
+
+  const handleSaveWorkOrder = async (updatedWorkOrder: WorkOrder) => {
+    setSavingWorkOrder(true);
+    try {
+      // Update the job if it exists
+      if (updatedWorkOrder.jobId) {
+        await api.updateJob(updatedWorkOrder.jobId, {
+          title: updatedWorkOrder.customerName,
+          customerName: updatedWorkOrder.customerName,
+          description: updatedWorkOrder.jobDescription,
+          location: updatedWorkOrder.location,
+          estimatedHours: updatedWorkOrder.estimatedHours,
+          status: updatedWorkOrder.status as any,
+          jobType: updatedWorkOrder.jobType
+        });
+      }
+
+      // Update the job assignment if it exists
+      if (updatedWorkOrder.jobAssignmentId) {
+        await api.updateJobAssignment(updatedWorkOrder.jobAssignmentId, {
+          assignedHours: updatedWorkOrder.estimatedHours,
+          actualHours: updatedWorkOrder.actualHours,
+          status: updatedWorkOrder.status,
+          notes: updatedWorkOrder.notes
+        });
+      }
+
+      // Refresh data
+      await loadData();
+      
+      setShowWorkOrderEditModal(false);
+      setSelectedWorkOrder(null);
+    } catch (error) {
+      console.error('Failed to save work order:', error);
+      alert('Failed to save work order. Please try again.');
+    } finally {
+      setSavingWorkOrder(false);
+    }
   };
 
 
@@ -1024,6 +1071,19 @@ function AppContent() {
           onClose={() => setSelectedWorkOrder(null)}
           onEdit={handleEditWorkOrder}
           onExport={handleExportWorkOrder}
+        />
+      )}
+
+      {/* Work Order Edit Modal */}
+      {selectedWorkOrder && showWorkOrderEditModal && (
+        <WorkOrderEditModal
+          workOrder={selectedWorkOrder}
+          onClose={() => {
+            setShowWorkOrderEditModal(false);
+            setSelectedWorkOrder(null);
+          }}
+          onSave={handleSaveWorkOrder}
+          isLoading={savingWorkOrder}
         />
       )}
 
