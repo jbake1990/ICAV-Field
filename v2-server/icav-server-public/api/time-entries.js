@@ -108,7 +108,7 @@ module.exports = async function handler(req, res) {
       // Build the query based on user role
       let query;
       if (userRole === 'admin') {
-        // Admins can see all time entries from the last 2 days
+        // Admins can see all time entries from the last 14 days
         query = sql`
           SELECT 
             id,
@@ -124,12 +124,12 @@ module.exports = async function handler(req, res) {
             created_at,
             updated_at
           FROM time_entries 
-          WHERE created_at >= NOW() - INTERVAL '2 days'
+          WHERE created_at >= NOW() - INTERVAL '14 days'
           ORDER BY clock_in_time DESC
         `;
-        console.log('Admin user - fetching time entries from last 2 days');
+        console.log('Admin user - fetching time entries from last 14 days');
       } else {
-        // Regular users only see their own entries from the last 2 days
+        // Regular users only see their own entries from the last 14 days
         query = sql`
           SELECT 
             id,
@@ -146,10 +146,10 @@ module.exports = async function handler(req, res) {
             updated_at
           FROM time_entries 
           WHERE user_id = ${userId}
-            AND created_at >= NOW() - INTERVAL '2 days'
+            AND created_at >= NOW() - INTERVAL '14 days'
           ORDER BY clock_in_time DESC
         `;
-        console.log('Regular user - fetching only user entries from last 2 days');
+        console.log('Regular user - fetching only user entries from last 14 days');
       }
       
       const { rows } = await query;
